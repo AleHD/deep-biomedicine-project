@@ -1,5 +1,6 @@
 from torch.utils.data import Dataset
 from torchvision.transforms import v2
+import torch
 
 from PIL import Image
 
@@ -43,6 +44,7 @@ class ImageDataset(Dataset):
             v2.RandomVerticalFlip(p=0.5),
             # v2.RandomRotation(degrees=180),
             v2.ToTensor(),
+            v2.ToDtype(torch.float32),
         ])
 
     def __getitem__(self, index):
