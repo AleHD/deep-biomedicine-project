@@ -2,6 +2,9 @@ from torch.utils.data import Dataset
 from torchvision.transforms import v2
 import torch
 
+from os import listdir
+from os.path import isfile, join
+
 from PIL import Image
 
 import os
@@ -15,6 +18,15 @@ Then, we override:
 3. __len__: get the length (number of samples) of the dataset
 '''
 
+def get_files(directory, keyword):
+    """Returns all files in directory if the file contains the keyword."""
+    file_list = []
+    for file in listdir(directory):
+        if isfile(join(directory, file)) and keyword in file:
+            file_list.append(join(directory, file))
+    return file_list
+
+
 class ImageDataset(Dataset):
     """ 
     A TumorDataset class.
@@ -22,7 +34,7 @@ class ImageDataset(Dataset):
     TumorDataset inherits from torch.utils.data.Dataset class.
     """
 
-    def __init__(self, root_dir, dataset, image_size=1024):
+    def __init__(self, root_dir, datasets, image_size=1024):
 
         """
         Inputs:
@@ -31,7 +43,14 @@ class ImageDataset(Dataset):
 
         # set root directory to root_dir
         self.root_dir = root_dir
-        self.dataset = dataset
+        # Get edof and mip file names
+        self.mip_files = []
+        self.edof_files = []
+        for dataset in datasets:
+            directory = join(root_dir, dataset)
+            self.mip_files += get_files(directory, 'mip')
+            self.edof_files += get_files(directory, 'edof')
+
         
         # set image size
         self.image_size= image_size
@@ -59,9 +78,11 @@ class ImageDataset(Dataset):
         """
 
         # load image and mask, give each of them an index, and return image, mask, and index.
-        input_image_name = os.path.join(self.root_dir, self.dataset + '_tile' + str(index)+'_mip.tif')
-        output_image_name = os.path.join(self.root_dir, self.dataset + '_tile' + str(index)+'_edof.tif')
-        
+        # input_image_name = os.path.join(self.root_dir, self.dataset + '_tile' + str(index)+'_mip.tif')
+        # output_image_name = os.path.join(self.root_dir, self.dataset + '_tile' + str(index)+'_edof.tif')
+        input_image_name = self.mip_files[index]
+        output_image_name = self.edof_files[index]
+
         input_image = Image.open(input_image_name)
         output_image = Image.open(output_image_name)
         # apply transform to both input and output
@@ -78,11 +99,11 @@ class ImageDataset(Dataset):
         # Get the size of the datasets (The number of samples in the dataset.)
         # Hint: The folder we provide contains samples and their mask, which means we have two images for each samples.
         
-        size_of_dataset = int(
-            len(
-                [name for name in os.listdir(self.root_dir) if os.path.isfile(os.path.join(self.root_dir, name))]
-            ) / 2   # imput and output
-        )
-
-
+        # size_of_dataset = int(
+        #     len(
+        #         [name for name in os.listdir(self.root_dir) if os.path.isfile(os.path.join(self.root_dir, name))]
+        #     ) / 2   # imput and output
+        # )
+        size_of_dataset = int(len(self.edof_files))
+           
         return size_of_dataset
