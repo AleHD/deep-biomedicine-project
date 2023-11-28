@@ -169,16 +169,18 @@ class Trainer():
         """
         self.model.eval()
         input_image = data['input_image'].to(self.device)
-        output_image = data['output_image'].numpy()
+        output_image = data['output_image'].squeeze().numpy()
+        # add dimension if needed, expected shape for model is [batch, 1, x,y]
+        if len(input_image.shape) < 4:
+            input_image = input_image[None,:,:,:]
+        pred = self.model(input_image).detach().cpu().squeeze().numpy()
 
-        pred = self.model(input_image).detach().cpu()
-        pred = pred.numpy()
-
-        input_image = input_image.detach().cpu().numpy()
+        input_image = input_image.detach().cpu().squeeze().numpy()
         
-        score = self._psnr(output_image, pred)
+        original_score = self._psnr(output_image, input_image)
+        improved_score = self._psnr(output_image, pred)
 
-        return input_image, pred, output_image, score
+        return input_image, pred, output_image, original_score, improved_score
 
     def _psnr(self, predicted, target):
         """

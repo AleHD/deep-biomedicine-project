@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import torch.nn.functional as F
 import pickle
 import matplotlib.pyplot as plt
 import torch
@@ -65,38 +66,29 @@ def get_indices(length, dataset_path, data_split, new=False):
             pickle.dump(data,file)
     return train_indices, test_indices
 
-def result(image, mask, output, title, transparency=0.38, save_path=None):
+def plot_result(results, title, save_path=None):
     """ 
-    Plots a 2x3 plot with comparisons of output and original image.
+    Plots a len(results)x3 plot with comparisons of output and original image.
+    Results is a list of dicts with keys: 'MIP', 'pred', 'EDOF', 'original_score', 'improved_score
     """
 
-    fig, axs = plt.subplots(2, 3, sharex=True, sharey=True, figsize=(
-        20, 15), gridspec_kw={'wspace': 0.025, 'hspace': 0.010})
+    fig, axs = plt.subplots(len(results), 3, sharex=True, sharey=True, figsize=(
+        20, 15), 
+        gridspec_kw={'wspace': 0.025, 'hspace': 0.10}
+    )
     fig.suptitle(title, x=0.5, y=0.92, fontsize=20)
+    for i in range(len(results)):
+        axs[i][0].set_title(f"Original MIP PSNR: {results[i]['original_score']}", fontdict={'fontsize': 16})
+        axs[i][0].imshow(results[i]["MIP"], cmap='gray')
+        axs[i][0].set_axis_off()
 
-    axs[0][0].set_title("Original Mask", fontdict={'fontsize': 16})
-    axs[0][0].imshow(mask, cmap='gray')
-    axs[0][0].set_axis_off()
+        axs[i][1].set_title(f"Denoised MIP, PSNR: {results[i]['improved_score']}", fontdict={'fontsize': 16})
+        axs[i][1].imshow(results[i]["pred"], cmap='gray')
+        axs[i][1].set_axis_off()
 
-    axs[0][1].set_title("Constructed Mask", fontdict={'fontsize': 16})
-    axs[0][1].imshow(output, cmap='gray')
-    axs[0][1].set_axis_off()
-
-    seg_output = mask*transparency
-    seg_image = np.add(image, seg_output)/2
-    axs[1][0].set_title("Original Segment", fontdict={'fontsize': 16})
-    axs[1][0].imshow(seg_image, cmap='gray')
-    axs[1][0].set_axis_off()
-
-    seg_output = output*transparency
-    seg_image = np.add(image, seg_output)/2
-    axs[1][1].set_title("Constructed Segment", fontdict={'fontsize': 16})
-    axs[1][1].imshow(seg_image, cmap='gray')
-    axs[1][1].set_axis_off()
-
-    axs[1][2].set_title("Original Image", fontdict={'fontsize': 16})
-    axs[1][2].imshow(image, cmap='gray')
-    axs[1][2].set_axis_off()
+        axs[i][2].set_title("Original EDOF", fontdict={'fontsize': 16})
+        axs[i][2].imshow(results[i]["EDOF"], cmap='gray')
+        axs[i][2].set_axis_off()
 
     plt.tight_layout()
 
