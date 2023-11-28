@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 class MWCNN(nn.Module):
-    def __init__(self, n_feats=64 ,n_colors=3  , conv=default_conv):
+    def __init__(self, n_feats=64 ,n_colors=1, batch_normalize=True, conv=default_conv):
         super(MWCNN, self).__init__()
         n_feats = n_feats
         kernel_size = 3
@@ -17,28 +17,28 @@ class MWCNN(nn.Module):
 
         m_head = [BBlock(conv, nColor, n_feats, kernel_size, act=act)]
         d_l0 = []
-        d_l0.append(DBlock_com1(conv, n_feats, n_feats, kernel_size, act=act, bn=False))
+        d_l0.append(DBlock_com1(conv, n_feats, n_feats, kernel_size, act=act, bn=batch_normalize))
 
 
-        d_l1 = [BBlock(conv, n_feats * 4, n_feats * 2, kernel_size, act=act, bn=False)]
-        d_l1.append(DBlock_com1(conv, n_feats * 2, n_feats * 2, kernel_size, act=act, bn=False))
+        d_l1 = [BBlock(conv, n_feats * 4, n_feats * 2, kernel_size, act=act, bn=batch_normalize)]
+        d_l1.append(DBlock_com1(conv, n_feats * 2, n_feats * 2, kernel_size, act=act, bn=batch_normalize))
 
         d_l2 = []
-        d_l2.append(BBlock(conv, n_feats * 8, n_feats * 4, kernel_size, act=act, bn=False))
-        d_l2.append(DBlock_com1(conv, n_feats * 4, n_feats * 4, kernel_size, act=act, bn=False))
+        d_l2.append(BBlock(conv, n_feats * 8, n_feats * 4, kernel_size, act=act, bn=batch_normalize))
+        d_l2.append(DBlock_com1(conv, n_feats * 4, n_feats * 4, kernel_size, act=act, bn=batch_normalize))
         pro_l3 = []
-        pro_l3.append(BBlock(conv, n_feats * 16, n_feats * 8, kernel_size, act=act, bn=False))
-        pro_l3.append(DBlock_com(conv, n_feats * 8, n_feats * 8, kernel_size, act=act, bn=False))
-        pro_l3.append(DBlock_inv(conv, n_feats * 8, n_feats * 8, kernel_size, act=act, bn=False))
-        pro_l3.append(BBlock(conv, n_feats * 8, n_feats * 16, kernel_size, act=act, bn=False))
+        pro_l3.append(BBlock(conv, n_feats * 16, n_feats * 8, kernel_size, act=act, bn=batch_normalize))
+        pro_l3.append(DBlock_com(conv, n_feats * 8, n_feats * 8, kernel_size, act=act, bn=batch_normalize))
+        pro_l3.append(DBlock_inv(conv, n_feats * 8, n_feats * 8, kernel_size, act=act, bn=batch_normalize))
+        pro_l3.append(BBlock(conv, n_feats * 8, n_feats * 16, kernel_size, act=act, bn=batch_normalize))
 
-        i_l2 = [DBlock_inv1(conv, n_feats * 4, n_feats * 4, kernel_size, act=act, bn=False)]
-        i_l2.append(BBlock(conv, n_feats * 4, n_feats * 8, kernel_size, act=act, bn=False))
+        i_l2 = [DBlock_inv1(conv, n_feats * 4, n_feats * 4, kernel_size, act=act, bn=batch_normalize)]
+        i_l2.append(BBlock(conv, n_feats * 4, n_feats * 8, kernel_size, act=act, bn=batch_normalize))
 
-        i_l1 = [DBlock_inv1(conv, n_feats * 2, n_feats * 2, kernel_size, act=act, bn=False)]
-        i_l1.append(BBlock(conv, n_feats * 2, n_feats * 4, kernel_size, act=act, bn=False))
+        i_l1 = [DBlock_inv1(conv, n_feats * 2, n_feats * 2, kernel_size, act=act, bn=batch_normalize)]
+        i_l1.append(BBlock(conv, n_feats * 2, n_feats * 4, kernel_size, act=act, bn=batch_normalize))
 
-        i_l0 = [DBlock_inv1(conv, n_feats, n_feats, kernel_size, act=act, bn=False)]
+        i_l0 = [DBlock_inv1(conv, n_feats, n_feats, kernel_size, act=act, bn=batch_normalize)]
 
         m_tail = [conv(n_feats, nColor, kernel_size)]
 
