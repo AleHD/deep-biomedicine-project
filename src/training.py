@@ -4,7 +4,7 @@ import torch.optim as optim
 import numpy as np
 
 class Trainer():
-    def __init__(self, model, criterion, device, closure=None):
+    def __init__(self, model, criterion, device):
         """ 
         The Trainer need to receive the model and the device.
         """
@@ -49,7 +49,7 @@ class Trainer():
         
         # Reducing LR on plateau feature to improve training.
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            self.optimizer, factor=0.85, patience=2, verbose=True)
+            self.optimizer, factor=0.85, patience=1, verbose=True)
         
         print('Starting Training Process')
 
@@ -57,7 +57,7 @@ class Trainer():
 
         # Epoch Loop
         try:
-            for epoch in (pbar := trange(epochs, desc="Epoch")):
+            for epoch in range(epochs):
 
                 # Training a single epoch
                 epoch_loss = self._train_epoch(trainloader, mini_batch)
@@ -69,9 +69,8 @@ class Trainer():
                 self.scheduler.step(epoch_loss)
 
                 # Training Logs printed.
-                pbar.set_postfix(loss=epoch_loss)
-                # print(f'Epoch: {epoch+1:03d},  ', end='')
-                # print(f'Loss:{epoch_loss:.7f},  ', end='')
+                print(f'Epoch: {epoch+1:03d},  ', end='')
+                print(f'Loss:{epoch_loss:.7f},  ', end='')
         except KeyboardInterrupt:
             print("Training interrupted by user!")
 
@@ -144,6 +143,7 @@ class Trainer():
         test_data_indexes = testloader.sampler.indices[:]
         data_len = len(test_data_indexes)
         mean_val_score = 0
+        mean_mse_score = 0
 
         testloader = iter(testloader)
 
@@ -164,27 +164,30 @@ class Trainer():
             pred = pred.numpy()
             
             mean_val_score += self._psnr(pred, output_image)
-
+            mean_mse_score += ((pred - output_image)**2).mean(axis=None)
+        
         mean_val_score = mean_val_score / data_len
-
-        return mean_val_score
+        mean_mse_score = mean_mse_score / data_len
+        return mean_val_score, mean_mse_score
 
     def predict(self, data):
         """ 
         Calculate the output mask on a single input data.
         """
         self.model.eval()
-        input_image = data['input_image'].numpy()
-        output_image = data['output_image'].numpy()
+        input_image = data['input_image'].to(self.device)
+        output_image = data['output_image'].squeeze().numpy()
+        # add dimension if needed, expected shape for model is [batch, 1, x,y]
+        if len(input_image.shape) < 4:
+            input_image = input_image[None,:,:,:]
+        pred = self.model(input_image).detach().cpu().squeeze().numpy()
 
-        image_tensor = torch.Tensor(data['input_image'])
-        image_tensor = image_tensor.view((-1, 1, 512, 512)).to(self.device)
-
-        pred = self.model(image_tensor).detach().cpu().numpy()
+        input_image = input_image.detach().cpu().squeeze().numpy()
         
-        score = self._psnr(output_image, pred)
+        original_score = self._psnr(output_image, input_image)
+        improved_score = self._psnr(output_image, pred)
 
-        return input_image, pred, score
+        return input_image, pred, output_image, original_score, improved_score
 
     def _psnr(self, predicted, target):
         """
