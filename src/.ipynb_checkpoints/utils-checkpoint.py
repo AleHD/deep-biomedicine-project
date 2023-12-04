@@ -50,7 +50,7 @@ def get_indices(length, dataset_path, data_split, new=False):
         # File found.
         with open(file_path,'rb') as file :
             data = pickle.load(file)
-            return data['train_indices'],data['validation_indices'], data['test_indices']
+            return data['train_indices'], data['test_indices']
         
     else:
         # File not found or fresh copy is required.
