@@ -1,7 +1,7 @@
 from torch.utils.data import Dataset
 from torchvision.transforms import v2
 import torch
-
+import numpy as np
 from os import listdir
 from os.path import isfile, join
 
@@ -91,9 +91,14 @@ class ImageDataset(Dataset):
         input_image, output_image = self.default_transformation(input_image, output_image)
         # normalize input
         if self.normalize == "standard":
-            input_image = (input_image - input_image.mean()) / input_image.std()
+            input_image = standardize(input_image)
+            output_image = standardize(output_image)
         elif self.normalize == "minmax":
-            input_image = (input_image - input_image.min()) / (input_image.max() - input_image.min())
+            input_image = minmax(input_image)
+            output_image = minmax(output_image)
+        elif self.normalize == "percentile":
+            input_image = percentile(input_image, low=0, up=100)
+            output_image = percentile(output_image, low=0, up=100)
         
         #create sample to return
         sample = {'index': int(index), 'input_image': input_image, 'output_image': output_image}
@@ -116,3 +121,16 @@ class ImageDataset(Dataset):
         size_of_dataset = int(len(self.edof_files))
            
         return size_of_dataset
+    
+
+def standardize(image):
+    image = image.float()
+    return (image - image.mean()) / image.std()
+
+def minmax(image):
+    return (image - image.min()) / (image.max() - image.min())
+
+def percentile(image, low=0, up=100):
+    lower = np.percentile(image, low)
+    upper = np.percentile(image, up)
+    return (image - lower) / (upper - lower)

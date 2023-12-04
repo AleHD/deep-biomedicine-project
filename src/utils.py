@@ -11,7 +11,7 @@ Nothing needs to be changed in this file unless you want to play around.
 
 
 def calculate_fft(img):
-    fft_im = torch.view_as_real(torch.torch.fft.fft2(img))
+    fft_im = torch.view_as_real(torch.torch.fft.fft2(img, norm="backward"))
     fft_amp = fft_im[:,:,:,0]**2 + fft_im[:,:,:,1]**2
     fft_amp = torch.sqrt(fft_amp)
     fft_pha = torch.atan2( fft_im[:,:,:,1], fft_im[:,:,:,0])
@@ -23,16 +23,20 @@ class FFTloss(torch.nn.Module):
         super(FFTloss, self).__init__()
         self.criterion = loss_f()
 
-    def forward(self, pred, target):
+    def forward(self, pred, target, han_window=False):
         target = target.to(torch.float32)
         # Apply hann window first
-        han_window = torch.sqrt(torch.outer(torch.hamming_window(32), torch.hamming_window(32)))
-        han_window = han_window[None, None, :, :]
-        han_pred = F.conv2d(pred,han_window, padding=1)
-        han_target = F.conv2d(target,han_window, padding=1)
-        # apply fft
-        pred_amp, pred_pha = calculate_fft(han_pred)
-        target_amp, target_pha = calculate_fft(han_target)
+        if han_window:
+            han_window = torch.sqrt(torch.outer(torch.hamming_window(32), torch.hamming_window(32)))
+            han_window = han_window[None, None, :, :]
+            han_pred = F.conv2d(pred,han_window, padding=1)
+            han_target = F.conv2d(target,han_window, padding=1)
+            # apply fft
+            pred_amp, pred_pha = calculate_fft(han_pred)
+            target_amp, target_pha = calculate_fft(han_target)
+        else:
+            pred_amp, pred_pha = calculate_fft(pred)
+            target_amp, target_pha = calculate_fft(target)
         loss = 0.5*self.criterion(pred_amp, target_amp) + 0.5*self.criterion(pred_pha, target_pha)
         return loss
     
