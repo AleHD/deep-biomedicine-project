@@ -4,7 +4,7 @@ import torch.optim as optim
 import numpy as np
 
 class Trainer():
-    def __init__(self, model, criterion, device):
+    def __init__(self, model, criterion, device, closure=None):
         """ 
         The Trainer need to receive the model and the device.
         """
@@ -16,9 +16,16 @@ class Trainer():
         # ToDo 0: Check the following links for more details of Dice loss:
         # 1. https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient
         # 2. https://dev.to/_aadidev/3-common-loss-functions-for-image-segmentation-545o
-        self.criterion = criterion
+        if criterion is None:
+            assert closure is not None
+            self.closure = closure
+        else:
+            assert closure is None
+            self.closure = lambda model, batch: criterion(model(batch["input_image"]),
+                                                          batch["output_image"])
 
-    def train(self, epochs, trainloader, mini_batch=None, learning_rate=0.001):
+    def train(self, epochs, trainloader, mini_batch=None, learning_rate=0.001,
+              weight_decay=0.0):
 
         """ 
         Train the model.
@@ -38,7 +45,7 @@ class Trainer():
 
         # ToDo 1: We choose Adam to be the optimizer.
         # Link to all the optimizers in torch.optim: https://pytorch.org/docs/stable/optim.html
-        self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         
         # Reducing LR on plateau feature to improve training.
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -49,20 +56,24 @@ class Trainer():
         self.model.train()
 
         # Epoch Loop
-        for epoch in range(epochs):
+        try:
+            for epoch in (pbar := trange(epochs, desc="Epoch")):
 
-            # Training a single epoch
-            epoch_loss = self._train_epoch(trainloader, mini_batch)
+                # Training a single epoch
+                epoch_loss = self._train_epoch(trainloader, mini_batch)
 
-            # Collecting all epoch loss values for future visualization.
-            loss_record.append(epoch_loss)
+                # Collecting all epoch loss values for future visualization.
+                loss_record.append(epoch_loss)
 
-            # Reduce LR On Plateau
-            self.scheduler.step(epoch_loss)
+                # Reduce LR On Plateau
+                self.scheduler.step(epoch_loss)
 
-            # Training Logs printed.
-            print(f'Epoch: {epoch+1:03d},  ', end='')
-            print(f'Loss:{epoch_loss:.7f},  ', end='')
+                # Training Logs printed.
+                pbar.set_postfix(loss=epoch_loss)
+                # print(f'Epoch: {epoch+1:03d},  ', end='')
+                # print(f'Loss:{epoch_loss:.7f},  ', end='')
+        except KeyboardInterrupt:
+            print("Training interrupted by user!")
 
         return loss_record
     
@@ -85,19 +96,15 @@ class Trainer():
             batch_iteration += 1
 
             # Loading data to device used.
-            image = data['input_image'].to(self.device)
-            mask = data['output_image'].to(self.device)
+            data = {"index": data["index"],
+                    "input_image": data["input_image"].to(self.device),
+                    "output_image": data["output_image"].to(self.device)}
 
             # Clearing gradients of optimizer.
             self.optimizer.zero_grad()
 
-            # Calculation predicted output using forward pass.
-            output = self.model(image)
-
-            # Calculating the loss value.
-            # Hint: self.criterion
-            loss_value = self.criterion(output, mask)
-            # ToDo 6: Computing the gradients.
+            # Calculation loss using closure.
+            loss_value = self.closure(self.model, data)
             loss_value.backward()
 
             # Optimizing the network parameters.
