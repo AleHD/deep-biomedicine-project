@@ -190,7 +190,7 @@ class Trainer():
             # Printing batch logs if any.
             if mini_batch:
                 if (batch+1) % mini_batch == 0:
-                    batch_loss = batch_loss / (mini_batch*trainloader.batch_size)
+                    batch_loss = batch_loss / (mini_batch*validationloader.batch_size)
                     print(f'Batch: {batch+1:02d},\tBatch Loss: {batch_loss:.7f}')
                     batch_loss = 0
 

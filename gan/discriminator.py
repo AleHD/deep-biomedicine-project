@@ -75,8 +75,7 @@ class Discriminator(nn.Module):
     def forward(self, x):
         x = self.conv01(x)
         x = self.conv02(x)
-        x = self.body(x)      
+        x = self.body(x)  
         x = x.view(-1, self.linear_size)
         x = self.tail(x)
-        
         return x
