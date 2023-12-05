@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+# https://github.com/pminhtam/MWCNN/tree/main
 
 def default_conv(in_channels, out_channels, kernel_size, bias=True, dilation=1):
     return nn.Conv2d(
@@ -50,6 +51,40 @@ class IWT(nn.Module):
         y = F.conv_transpose2d(x, filters, groups=C, stride=2)
         return y
 
+class ChannelPool(nn.Module):
+    def forward(self, x):
+        return torch.cat( (torch.max(x,1)[0].unsqueeze(1), torch.mean(x,1).unsqueeze(1)), dim=1 )
+
+class spatial_attn_layer(nn.Module):
+    def __init__(self, kernel_size=3):
+        super(spatial_attn_layer, self).__init__()
+        self.compress = ChannelPool()
+        self.spatial = nn.Conv2d(2, 1, kernel_size, stride=1, padding=(kernel_size-1) // 2)
+    def forward(self, x):
+        # import pdb;pdb.set_trace()
+        x_compress = self.compress(x)
+        x_out = self.spatial(x_compress)
+        scale = torch.sigmoid(x_out) # broadcasting
+        return x * scale
+    
+
+class CALayer(nn.Module):
+    def __init__(self, channel, reduction=16):
+        super(CALayer, self).__init__()
+        # global average pooling: feature --> point
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        # feature channel downscale and upscale --> channel weight
+        self.conv_du = nn.Sequential(
+                nn.Conv2d(channel, channel // reduction, 1, padding=0, bias=True),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(channel // reduction, channel, 1, padding=0, bias=True),
+                nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        y = self.avg_pool(x)
+        y = self.conv_du(y)
+        return x * y
 
 
 class BBlock(nn.Module):
@@ -70,6 +105,7 @@ class BBlock(nn.Module):
     def forward(self, x):
         x = self.body(x).mul(self.res_scale)
         return x
+
 
 class DBlock_com(nn.Module):
     def __init__(

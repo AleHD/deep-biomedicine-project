@@ -44,10 +44,9 @@ class Trainer():
         self.d_optim = optim.Adam(self.discriminator.parameters(), lr=learning_rate)
         self.g_optim = optim.Adam(self.generator.parameters(), lr=learning_rate)
         
-        # Reducing LR on plateau feature to improve training.
-        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.g_optim, factor=0.5, patience=1)
+        # Reducing LR, on plateau gives memory issues, so chose this simpler one
+        self.scheduler = optim.lr_scheduler.StepLR(self.g_optim, step_size=10, gamma = 0.5)
         
-
         print('Starting Training Process')
 
         # set to training mode
@@ -67,7 +66,7 @@ class Trainer():
 
             # Reduce LR On Plateau
             self.scheduler.step(epoch_g_loss)
-            
+
             if (epoch+1) % 10 == 0 or epoch == 0:
                 # Training Logs printed.
                 print(f'Epoch: {epoch+1:03d},  ', end='')

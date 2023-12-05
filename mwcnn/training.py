@@ -16,7 +16,7 @@ class Trainer():
         self.clear_cache = clear_cache
 
         # like L1 loss
-        self.local_criterion = local_criterion.to(device)
+        self.local_criterion = local_criterion
         # like vgg loss or fft loss
         if global_criterion:
             self.global_criterion = global_criterion.to(device)
@@ -59,11 +59,12 @@ class Trainer():
         for epoch in range(epochs):
 
             # Training a single epoch
-            epoch_loss = self._train_epoch(trainloader, mini_batch)
+            epoch_loss = self._train_epoch(trainloader)
             # Collecting all epoch loss values for future visualization.
             train_loss_record.append(epoch_loss)
 
-            validation_loss_record.append(_validate_epoch(self, validationloader))
+            validation_epoch_loss = self._validate_epoch(validationloader)
+            validation_loss_record.append(validation_epoch_loss)
 
             # Reduce LR On Plateau
             self.scheduler.step(epoch_loss)
@@ -122,7 +123,7 @@ class Trainer():
         return epoch_loss
 
 
-def _validate_epoch(self, validationloader):
+    def _validate_epoch(self, validationloader):
         """ Training each epoch.
         Parameters:
         1. validationloader: Validation dataloader.
