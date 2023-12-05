@@ -76,3 +76,4 @@ class FFTloss(torch.nn.Module):
             target_amp, target_pha = calculate_fft(target)
         loss = self.criterion(pred_amp, target_amp) #+ 0.5*self.criterion(pred_pha, target_pha)
         return loss
+    

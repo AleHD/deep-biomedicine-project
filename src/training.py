@@ -1,22 +1,21 @@
-import torch
+import torch, gc
 import torch.optim as optim
 
 import numpy as np
 
 class Trainer():
-    def __init__(self, model, criterion, device):
+    def __init__(self, model, criterion, device, clear_cache=False):
         """ 
         The Trainer need to receive the model and the device.
         """
 
         self.model = model
         self.device = device
+        # To clear cache after each epoch
+        self.clear_cache = clear_cache
 
-        # we use Dice-loss as our loss function in this exercise.
-        # ToDo 0: Check the following links for more details of Dice loss:
-        # 1. https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient
-        # 2. https://dev.to/_aadidev/3-common-loss-functions-for-image-segmentation-545o
-        self.criterion = criterion
+        # loss function
+        self.criterion = criterion.to(device)
 
     def train(self, epochs, trainloader, mini_batch=None, learning_rate=0.001):
 
@@ -59,10 +58,15 @@ class Trainer():
 
             # Reduce LR On Plateau
             self.scheduler.step(epoch_loss)
-            if (epoch+1) % 10 == 0:
+            if (epoch+1) % 10 == 0 or epoch == 0:
                 # Training Logs printed.
                 print(f'Epoch: {epoch+1:03d},  ', end='')
                 print(f'Loss:{epoch_loss:.7f},  ', end='\n')
+            
+            # clear cache
+            if self.clear_cache:
+                gc.collect()
+                torch.cuda.empty_cache()
 
         return loss_record
     
