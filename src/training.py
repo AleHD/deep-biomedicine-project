@@ -3,8 +3,18 @@ import torch.optim as optim
 
 import numpy as np
 
+
+class SchedulerWrapper:
+    def __init__(self, scheduler):
+        self.scheduler = scheduler
+        self.optimizer = self.scheduler.optimizer
+
+    def step(self, loss=None):
+        self.scheduler.step()
+
+
 class Trainer():
-    def __init__(self, model, criterion, device):
+    def __init__(self, model, criterion, device, closure=None):
         """ 
         The Trainer need to receive the model and the device.
         """
@@ -25,7 +35,7 @@ class Trainer():
                                                           batch["output_image"])
 
     def train(self, epochs, trainloader, mini_batch=None, learning_rate=0.001,
-              weight_decay=0.0):
+              weight_decay=0.0, scheduler="plateau", warmup=0.0):
 
         """ 
         Train the model.
@@ -48,8 +58,22 @@ class Trainer():
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         
         # Reducing LR on plateau feature to improve training.
-        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            self.optimizer, factor=0.85, patience=1, verbose=True)
+        warmup = int(warmup*epochs)
+        if scheduler == "plateau":
+            self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+                self.optimizer, factor=0.85, patience=2, verbose=True)
+        elif scheduler == "cosine":
+            self.scheduler = SchedulerWrapper(optim.lr_scheduler.CosineAnnealingLR(
+                self.optimizer, epochs - warmup, 0.1*learning_rate
+            ))
+        else:
+            raise KeyError(f"Unknown scheduler {scheduler}")
+
+        if warmup > 0:
+            self.scheduler = SchedulerWrapper(optim.lr_scheduler.ChainedScheduler([
+                optim.lr_scheduler.LinearLR(self.optimizer, 0.1, total_iters=warmup),
+                self.scheduler
+            ]))
         
         print('Starting Training Process')
 
@@ -69,8 +93,8 @@ class Trainer():
                 self.scheduler.step(epoch_loss)
 
                 # Training Logs printed.
-                print(f'Epoch: {epoch+1:03d},  ', end='')
-                print(f'Loss:{epoch_loss:.7f},  ', end='')
+                print(f'Epoch: {epoch+1:03d},  ', end='', flush=True)
+                print(f'Loss:{epoch_loss:.7f},  ', end='', flush=True)
         except KeyboardInterrupt:
             print("Training interrupted by user!")
 
