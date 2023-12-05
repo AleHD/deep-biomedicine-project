@@ -4,7 +4,7 @@ import torch.optim as optim
 import numpy as np
 
 class Trainer():
-    def __init__(self, model, local_criterion, device, global_criterion=None, clear_cache=False):
+    def __init__(self, model, local_criterion, device, global_criterion=None, scale=None):
         """ 
         The Trainer need to receive the model and the device.
         """
@@ -12,14 +12,12 @@ class Trainer():
         self.model = model
         self.device = device        
 
-        # To clear cache after each epoch
-        self.clear_cache = clear_cache
-
         # like L1 loss
         self.local_criterion = local_criterion
         # like vgg loss or fft loss
         if global_criterion:
             self.global_criterion = global_criterion.to(device)
+            self.scale = scale
         else:
             self.global_criterion = None
 
@@ -108,7 +106,7 @@ class Trainer():
             # Calculating the loss value.
             loss_value = self.local_criterion(output, sharp)
             if self.global_criterion:
-                loss_value += 0.001 * self.global_criterion(output, sharp)
+                loss_value += self.scale * self.global_criterion(output, sharp)
 
             # Computing the gradients.
             loss_value.backward()
