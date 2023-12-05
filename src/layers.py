@@ -78,7 +78,7 @@ def dwt_init(x):
     return torch.cat((x_LL, x_HL, x_LH, x_HH), 1)
 
 def iwt_init(x):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     r = 2
     in_batch, in_channel, in_height, in_width = x.size()
     #print([in_batch, in_channel, in_height, in_width])

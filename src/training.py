@@ -42,7 +42,7 @@ class Trainer():
         
         # Reducing LR on plateau feature to improve training.
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            self.optimizer, factor=0.85, patience=1, verbose=True)
+            self.optimizer, factor=0.5, patience=1, verbose=False)
         
         print('Starting Training Process')
 
@@ -59,10 +59,10 @@ class Trainer():
 
             # Reduce LR On Plateau
             self.scheduler.step(epoch_loss)
-
-            # Training Logs printed.
-            print(f'Epoch: {epoch+1:03d},  ', end='')
-            print(f'Loss:{epoch_loss:.7f},  ', end='\n')
+            if (epoch+1) % 10 == 0:
+                # Training Logs printed.
+                print(f'Epoch: {epoch+1:03d},  ', end='')
+                print(f'Loss:{epoch_loss:.7f},  ', end='\n')
 
         return loss_record
     
@@ -111,7 +111,7 @@ class Trainer():
             if mini_batch:
                 if (batch+1) % mini_batch == 0:
                     batch_loss = batch_loss / (mini_batch*trainloader.batch_size)
-                    print(f'Batch: {batch+1:02d},\tBatch Loss: {batch_loss:.7f}')
+                    # print(f'Batch: {batch+1:02d},\tBatch Loss: {batch_loss:.7f}')
                     batch_loss = 0
 
         epoch_loss = epoch_loss/(batch_iteration*trainloader.batch_size)
@@ -191,6 +191,6 @@ class Trainer():
         if(mse == 0):  # MSE is zero means no noise is present in the signal . 
                     # Therefore PSNR have no importance. 
             return 100
-        max_pixel = 16800
+        max_pixel = 1   # minmaxed
         psnr = 20 * np.log10(max_pixel / np.sqrt(mse)) 
         return psnr 
