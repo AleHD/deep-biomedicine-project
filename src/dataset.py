@@ -34,7 +34,8 @@ class ImageDataset(Dataset):
     TumorDataset inherits from torch.utils.data.Dataset class.
     """
 
-    def __init__(self, root_dir, datasets, normalize="standard", image_size=1024):
+    def __init__(self, root_dir, datasets, normalize="standard", image_size=1024,
+                 normalize_output=False):
 
         """
         Inputs:
@@ -46,6 +47,7 @@ class ImageDataset(Dataset):
         # set root directory to root_dir
         self.root_dir = root_dir
         self.normalize = normalize
+        self.normalize_output = normalize_output
         # Get edof and mip file names
         self.mip_files = []
         self.edof_files = []
@@ -53,6 +55,11 @@ class ImageDataset(Dataset):
             directory = join(root_dir, dataset)
             self.mip_files += get_files(directory, 'mip')
             self.edof_files += get_files(directory, 'edof')
+        # assert len(self.mip_files) == len(self.edof_files)
+        # for mf, ef in zip(self.mip_files, self.edof_files):
+        #     from pathlib import Path
+        #     ef = Path(ef).parent/Path(ef).name.replace("edof", "mip")
+        #     assert mf == str(ef), f"{mf} != {ef}"
 
         
         # set image size
@@ -92,8 +99,12 @@ class ImageDataset(Dataset):
         # normalize input
         if self.normalize == "standard":
             input_image = (input_image - input_image.mean()) / input_image.std()
+            if self.normalize_output:
+                output_image = (output_image - output_image.mean()) / output_image.std()
         elif self.normalize == "minmax":
             input_image = (input_image - input_image.min()) / (input_image.max() - input_image.min())
+            if self.normalize_output:
+                output_image = (output_image - output_image.min()) / (output_image.max() - output_image.min())
         
         #create sample to return
         sample = {'index': int(index), 'input_image': input_image, 'output_image': output_image}
