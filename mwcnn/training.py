@@ -4,21 +4,26 @@ import torch.optim as optim
 import numpy as np
 
 class Trainer():
-    def __init__(self, model, local_criterion, global_criterion, device, clear_cache=False):
+    def __init__(self, model, local_criterion, device, global_criterion=None, clear_cache=False):
         """ 
         The Trainer need to receive the model and the device.
         """
 
         self.model = model
-        self.device = device
+        self.device = device        
+
         # To clear cache after each epoch
         self.clear_cache = clear_cache
 
-        # loss function
+        # like L1 loss
         self.local_criterion = local_criterion.to(device)
-        self.global_criterion = global_criterion.to(device)
+        # like vgg loss or fft loss
+        if global_criterion:
+            self.global_criterion = global_criterion.to(device)
+        else:
+            self.global_criterion = None
 
-    def train(self, epochs, trainloader, mini_batch=None, learning_rate=0.001):
+    def train(self, epochs, trainloader, validationloader, mini_batch=None, learning_rate=0.001):
 
         """ 
         Train the model.
@@ -34,7 +39,9 @@ class Trainer():
         """
 
         # For recording the loss value.
-        loss_record = []
+        train_loss_record = []
+        validation_loss_record = []
+
 
         # ToDo 1: We choose Adam to be the optimizer.
         # Link to all the optimizers in torch.optim: https://pytorch.org/docs/stable/optim.html
@@ -53,9 +60,10 @@ class Trainer():
 
             # Training a single epoch
             epoch_loss = self._train_epoch(trainloader, mini_batch)
-
             # Collecting all epoch loss values for future visualization.
-            loss_record.append(epoch_loss)
+            train_loss_record.append(epoch_loss)
+
+            validation_loss_record.append(_validate_epoch(self, validationloader))
 
             # Reduce LR On Plateau
             self.scheduler.step(epoch_loss)
@@ -64,45 +72,44 @@ class Trainer():
                 print(f'Epoch: {epoch+1:03d},  ', end='')
                 print(f'Loss:{epoch_loss:.7f},  ', end='\n')
             
-            # clear cache
-            if self.clear_cache:
-                gc.collect()
-                torch.cuda.empty_cache()
+            gc.collect()
+            torch.cuda.empty_cache()
 
-        return loss_record
+        return train_loss_record, validation_loss_record
     
-    def _train_epoch(self, trainloader, mini_batch):
+    def _train_epoch(self, trainloader):
         """ Training each epoch.
         Parameters:
         1. trainloader: Training dataloader for the optimizer.
-        2. mini_batch: The number of batches used during training.
 
         Returns:
             epoch_loss(float): Loss calculated for each epoch.
         """
 
-        epoch_loss, batch_loss, batch_iteration = 0, 0, 0
+        epoch_loss, batch_iteration = 0, 0
 
         # Write a training loop. You can check exercise 1 for a standard training loop.
-        for batch, data in enumerate(trainloader):
+        for _, data in enumerate(trainloader):
 
             # Keeping track how many iteration is happening.
             batch_iteration += 1
 
             # Loading data to device used.
-            image = data['input_image'].to(self.device)
-            mask = data['output_image'].to(self.device)
+            noisy = data['input_image'].to(self.device)
+            sharp = data['output_image'].to(self.device)
 
             # Clearing gradients of optimizer.
             self.optimizer.zero_grad()
 
             # Calculation predicted output using forward pass.
-            output = self.model(image)
+            output = self.model(noisy)
 
             # Calculating the loss value.
-            # Hint: self.criterion
-            loss_value = self.local_criterion(output, mask) + 0.001 * self.global_criterion(output, mask)
-            # ToDo 6: Computing the gradients.
+            loss_value = self.local_criterion(output, sharp)
+            if self.global_criterion:
+                loss_value += 0.001 * self.global_criterion(output, sharp)
+
+            # Computing the gradients.
             loss_value.backward()
 
             # Optimizing the network parameters.
@@ -110,92 +117,49 @@ class Trainer():
 
             # Updating the running training loss
             epoch_loss += loss_value.item()
-            batch_loss += loss_value.item()
-
-            # Printing batch logs if any.
-            if mini_batch:
-                if (batch+1) % mini_batch == 0:
-                    batch_loss = batch_loss / (mini_batch*trainloader.batch_size)
-                    # print(f'Batch: {batch+1:02d},\tBatch Loss: {batch_loss:.7f}')
-                    batch_loss = 0
 
         epoch_loss = epoch_loss/(batch_iteration*trainloader.batch_size)
         return epoch_loss
 
-    def test(self, testloader):
-        """ 
-        To test the performance of model on testing dataset.
 
+def _validate_epoch(self, validationloader):
+        """ Training each epoch.
         Parameters:
-        1. testloader: The testloader we create in Section.1 Dataset and Dataloader.
-        2. Threshold: We want to segment our image to foreground and background and the output of each pixel is a number between 0 and 1. 
-                      Thus, we need a threshold to decide is the pixel belongs to the foreground or background.
+        1. validationloader: Validation dataloader.
 
         Returns:
-        mean_val_score: The mean PSNR for the whole test dataset.
-
-        You do not need to change this function.
+            epoch_loss(float): Loss calculated for each epoch.
         """
+
+        epoch_loss, batch_iteration = 0, 0
+
+        # set models to eval mode
         self.model.eval()
 
-        test_data_indexes = testloader.sampler.indices[:]
-        data_len = len(test_data_indexes)
-        mean_val_score = 0
-        mean_mse_score = 0
-
-        testloader = iter(testloader)
-
-        while len(test_data_indexes) != 0:
-
-            data = next(testloader)
-            index = int(data['index'])
+        for _, data in enumerate(validationloader):
             
-            if index in test_data_indexes:
-                test_data_indexes.remove(index)
-            else:
-                continue
-
-            input_image = data['input_image'].to(self.device)
-            output_image = data['output_image'].numpy()
-
-            pred = self.model(input_image).detach().cpu()
-            pred = pred.numpy()
+            # Keeping track how many iteration is happening.
+            batch_iteration += 1
             
-            mean_val_score += self._psnr(pred, output_image)
-            mean_mse_score += ((pred - output_image)**2).mean(axis=None)
-        
-        mean_val_score = mean_val_score / data_len
-        mean_mse_score = mean_mse_score / data_len
-        return mean_val_score, mean_mse_score
+            # Loading data to device used.
+            noisy = data['input_image'].to(self.device)
+            sharp = data['output_image'].to(self.device)
 
-    def predict(self, data):
-        """ 
-        Calculate the output mask on a single input data.
-        """
-        self.model.eval()
-        input_image = data['input_image'].to(self.device)
-        output_image = data['output_image'].squeeze().numpy()
-        # add dimension if needed, expected shape for model is [batch, 1, x,y]
-        if len(input_image.shape) < 4:
-            input_image = input_image[None,:,:,:]
-        pred = self.model(input_image).detach().cpu().squeeze().numpy()
+            # Clearing gradients of optimizer.
+            self.optimizer.zero_grad()
 
-        input_image = input_image.detach().cpu().squeeze().numpy()
-        
-        original_score = self._psnr(output_image, input_image)
-        improved_score = self._psnr(output_image, pred)
+            # Calculation predicted output using forward pass.
+            output = self.model(noisy)
 
-        return input_image, pred, output_image, original_score, improved_score
+            # Calculating the loss value.
+            loss_value = self.local_criterion(output, sharp)
+            if self.global_criterion:
+                loss_value += 0.001 * self.global_criterion(output, sharp)
 
-    def _psnr(self, predicted, target):
-        """
-        Predicted: the prediction from the model.
-        Target: the groud truth.
-        """
-        mse = np.mean((predicted - target) ** 2) 
-        if(mse == 0):  # MSE is zero means no noise is present in the signal . 
-                    # Therefore PSNR have no importance. 
-            return 100
-        max_pixel = 1   # minmaxed
-        psnr = 20 * np.log10(max_pixel / np.sqrt(mse)) 
-        return psnr 
+            epoch_loss += loss_value.item()
+            
+        # set model to training mode again
+        self.model.train()
+
+        epoch_loss = epoch_loss/(batch_iteration*validationloader.batch_size)
+        return epoch_loss

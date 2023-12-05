@@ -60,7 +60,6 @@ class Trainer():
                 # Collecting all epoch loss values for future visualization.
                 train_loss_record.append(training_epoch_loss)
                 validation_loss_record.append(validation_epoch_loss)
-
                 # Reduce LR On Plateau
                 #self.scheduler.step(epoch_loss)
 
