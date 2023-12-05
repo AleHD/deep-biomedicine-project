@@ -1,4 +1,4 @@
-from src.layers import *
+from mwcnn.layers import *
 import torch.nn as nn
 
 

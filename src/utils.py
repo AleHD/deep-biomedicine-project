@@ -8,7 +8,6 @@ import torch
 Nothing needs to be changed in this file unless you want to play around.
 '''
     
-
 def get_indices(length, dataset_path, data_split, new=False):
     """ 
     Gets the Training & Testing data indices
