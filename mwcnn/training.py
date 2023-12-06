@@ -6,7 +6,14 @@ import numpy as np
 class Trainer():
     def __init__(self, model, local_criterion, device, global_criterion=None, scale=None):
         """ 
-        The Trainer need to receive the model and the device.
+        Initate trainer
+
+        Parameters:
+        1. model: Model to train.
+        2. local_criterion: local loss function such as L1 or L2 loss.
+        3. device: Device to train on (e.g. cuda:0)
+        4. global_criterion: global loss function, such as fft or perception loss.
+        5. scale: scaling of global loss.
         """
 
         self.model = model
@@ -33,7 +40,7 @@ class Trainer():
         4. learning_rate: Learning rate for optimizer.
         
         Return:
-        1. history(dict): 'train_loss': List of loss at every epoch.
+        1. train_loss_record, validation_loss_record: train and validation losses.
         """
 
         # For recording the loss value.
