@@ -42,15 +42,15 @@ def evaluate(model: Callable[[torch.Tensor], torch.Tensor], dataset: ImageDatase
         normalize_output = dset_config.get("normalize_output", False)
 
         if normalize == "standard":
-            mean = torch.mean(x.reshape(batch_size, -1), dim=1).view(batch_size, 1, 1, 1)
-            std = torch.std(x.reshape(batch_size, -1), dim=1).view(batch_size, 1, 1, 1)
+            mean = torch.mean(x.reshape(batch_size, -1), dim=1).view(x.size(0), 1, 1, 1)
+            std = torch.std(x.reshape(batch_size, -1), dim=1).view(x.size(0), 1, 1, 1)
             x = (x - mean)/std
             if pred is not None and normalize_output:
                 pred = pred*std + mean
             return x, pred
         if normalize == "minmax":
-            mi = torch.min(x.reshape(batch_size, -1), dim=1).values.view(batch_size, 1, 1, 1)
-            ma = torch.max(x.reshape(batch_size, -1), dim=1).values.view(batch_size, 1, 1, 1)
+            mi = torch.min(x.reshape(batch_size, -1), dim=1).values.view(x.size(0), 1, 1, 1)
+            ma = torch.max(x.reshape(batch_size, -1), dim=1).values.view(x.size(0), 1, 1, 1)
             x = (x - mi)/(ma - mi)
             if pred is not None and normalize_output:
                 pred = pred*(ma - mi) + mi
