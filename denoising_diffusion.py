@@ -22,7 +22,7 @@ class DiffusionModel(nn.Module):
         x_t = x_T = x_T.to(self.dtype)
         for t in reversed(range(1, self.steps + 1)):
             t = torch.full((x_T.size(0),), t, device=x_T.device, dtype=torch.long)
-            alpha = t.to(self.dtype)/self.steps
+            alpha = t.view(-1, 1, 1, 1).to(self.dtype)/self.steps
             x_t = (1 - alpha)*self.x0(x_t, x_T, t) + alpha*x_T
             # alpha_tminus1 = (t - 1).to(self.dtype)/self.steps
             # out = self.x0(x_t, x_T, t)
@@ -32,6 +32,9 @@ class DiffusionModel(nn.Module):
             # x_t = (1 - alpha_t)*self.x0(x_t, x_T, t) + alpha_t*x_T
             x_t = x_t.clip(0, 1)
         return x_t
+
+    def predict(self, x_T: torch.Tensor) -> torch.Tensor:
+        return self(x_T.to(self.device)).to(x_T.device)
 
     def closure(self, batch: dict) -> torch.Tensor:
         x_0 = batch["output_image"].to(self.dtype)

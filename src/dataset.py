@@ -4,6 +4,7 @@ import torch
 
 from os import listdir
 from os.path import isfile, join
+from pathlib import Path
 
 from PIL import Image
 
@@ -55,11 +56,12 @@ class ImageDataset(Dataset):
             directory = join(root_dir, dataset)
             self.mip_files += get_files(directory, 'mip')
             self.edof_files += get_files(directory, 'edof')
-        # assert len(self.mip_files) == len(self.edof_files)
-        # for mf, ef in zip(self.mip_files, self.edof_files):
-        #     from pathlib import Path
-        #     ef = Path(ef).parent/Path(ef).name.replace("edof", "mip")
-        #     assert mf == str(ef), f"{mf} != {ef}"
+        self.mip_files = sorted(self.mip_files)
+        self.edof_files = sorted(self.edof_files)
+        assert len(self.mip_files) == len(self.edof_files)
+        for mf, ef in zip(self.mip_files, self.edof_files):
+            ef = Path(ef).parent/Path(ef).name.replace("edof", "mip")
+            assert mf == str(ef), f"{mf} != {ef}"
 
         
         # set image size
@@ -127,3 +129,12 @@ class ImageDataset(Dataset):
         size_of_dataset = int(len(self.edof_files))
            
         return size_of_dataset
+
+    def __iter__(self):
+        for i in range(len(self)):
+            yield self[i]
+
+
+
+def get_splits(path: str, **kwargs) -> tuple[ImageDataset, ImageDataset]:
+    return ImageDataset(path, ["train"], **kwargs), ImageDataset(path, ["val"], **kwargs)
