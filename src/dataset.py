@@ -1,7 +1,7 @@
 from torch.utils.data import Dataset
 from torchvision.transforms import v2
 import torch
-
+import numpy as np
 from os import listdir
 from os.path import isfile, join
 from pathlib import Path
@@ -35,8 +35,7 @@ class ImageDataset(Dataset):
     TumorDataset inherits from torch.utils.data.Dataset class.
     """
 
-    def __init__(self, root_dir, datasets, normalize="standard", image_size=1024,
-                 normalize_output=False):
+    def __init__(self, root_dir, datasets, normalize="standard", image_size=1024):
 
         """
         Inputs:
@@ -48,7 +47,6 @@ class ImageDataset(Dataset):
         # set root directory to root_dir
         self.root_dir = root_dir
         self.normalize = normalize
-        self.normalize_output = normalize_output
         # Get edof and mip file names
         self.mip_files = []
         self.edof_files = []
@@ -103,14 +101,12 @@ class ImageDataset(Dataset):
             mean = input_image.mean()
             std = input_image.std()
             input_image = (input_image - mean) / std
-            if self.normalize_output:
-                output_image = (output_image - mean) / std
+            output_image = (output_image - mean) / std
         elif self.normalize == "minmax":
             mi = input_image.min()
             ma = input_image.max()
             input_image = (input_image - mi) / (ma - mi)
-            if self.normalize_output:
-                output_image = (output_image - mi) / (ma - mi)
+            output_image = (output_image - mi) / (ma - mi)
         
         #create sample to return
         sample = {'index': int(index), 'input_image': input_image, 'output_image': output_image}
@@ -133,12 +129,3 @@ class ImageDataset(Dataset):
         size_of_dataset = int(len(self.edof_files))
            
         return size_of_dataset
-
-    def __iter__(self):
-        for i in range(len(self)):
-            yield self[i]
-
-
-
-def get_splits(path: str, **kwargs) -> tuple[ImageDataset, ImageDataset]:
-    return ImageDataset(path, ["train"], **kwargs), ImageDataset(path, ["val"], **kwargs)
