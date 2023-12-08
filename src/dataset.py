@@ -22,7 +22,7 @@ Then, we override:
 def get_files(directory, keyword):
     """Returns all files in directory if the file contains the keyword."""
     file_list = []
-    for file in listdir(directory):
+    for file in sorted(listdir(directory)):
         if isfile(join(directory, file)) and keyword in file:
             file_list.append(join(directory, file))
     return file_list
@@ -54,12 +54,10 @@ class ImageDataset(Dataset):
             directory = join(root_dir, dataset)
             self.mip_files += get_files(directory, 'mip')
             self.edof_files += get_files(directory, 'edof')
-        self.mip_files = sorted(self.mip_files)
-        self.edof_files = sorted(self.edof_files)
         assert len(self.mip_files) == len(self.edof_files)
         for mf, ef in zip(self.mip_files, self.edof_files):
             ef = Path(ef).parent/Path(ef).name.replace("edof", "mip")
-            assert mf == str(ef), f"{mf} != {ef}"
+            assert str(Path(mf)) == str(ef), f"{mf} != {ef}"
 
         
         # set image size
