@@ -14,28 +14,17 @@ class SchedulerWrapper:
 
 
 class Trainer():
-    def __init__(self, model, criterion, device, closure=None):
+    def __init__(self, model, learning_rate, device, closure=None):
         """ 
         The Trainer need to receive the model and the device.
         """
 
         self.model = model
         self.device = device
+        self.learning_rate = learning_rate
 
-        # we use Dice-loss as our loss function in this exercise.
-        # ToDo 0: Check the following links for more details of Dice loss:
-        # 1. https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient
-        # 2. https://dev.to/_aadidev/3-common-loss-functions-for-image-segmentation-545o
-        if criterion is None:
-            assert closure is not None
-            self.closure = closure
-        else:
-            assert closure is None
-            self.closure = lambda model, batch: criterion(model(batch["input_image"]),
-                                                          batch["output_image"])
-
-    def train(self, epochs, trainloader, mini_batch=None, learning_rate=0.001,
-              weight_decay=0.0, scheduler="plateau", warmup=0.0):
+    def train(self, epochs, trainloader, validation_loader,
+              scheduler="plateau", warmup=0.0):
 
         """ 
         Train the model.
@@ -51,11 +40,7 @@ class Trainer():
         """
 
         # For recording the loss value.
-        loss_record = []
-
-        # ToDo 1: We choose Adam to be the optimizer.
-        # Link to all the optimizers in torch.optim: https://pytorch.org/docs/stable/optim.html
-        self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        train_loss_record, validation_loss_record = [], []
         
         # Reducing LR on plateau feature to improve training.
         warmup = int(warmup*epochs)
@@ -64,7 +49,7 @@ class Trainer():
                 self.optimizer, factor=0.85, patience=2, verbose=True)
         elif scheduler == "cosine":
             self.scheduler = SchedulerWrapper(optim.lr_scheduler.CosineAnnealingLR(
-                self.optimizer, epochs - warmup, 0.01*learning_rate
+                self.optimizer, epochs - warmup, 0.01*self.learning_rate
             ))
         else:
             raise KeyError(f"Unknown scheduler {scheduler}")
@@ -84,23 +69,25 @@ class Trainer():
             for epoch in range(epochs):
 
                 # Training a single epoch
-                epoch_loss = self._train_epoch(trainloader, mini_batch)
-
+                epoch_loss = self._train_epoch(trainloader)
+                validation_loss = self._validate_epoch(validation_loader)
+        
                 # Collecting all epoch loss values for future visualization.
-                loss_record.append(epoch_loss)
-
+                train_loss_record.append(epoch_loss)
+                validation_loss_record.append(validation_loss)
                 # Reduce LR On Plateau
                 self.scheduler.step(epoch_loss)
 
                 # Training Logs printed.
                 print(f'Epoch: {epoch+1:03d},  ', end='', flush=True)
-                print(f'Loss:{epoch_loss:.7f},  ', end='', flush=True)
+                print(f'Train Loss:{epoch_loss:.7f},  ', end='', flush=True)
+                print(f'Validation Loss:{validation_loss:.7f},  ', end='', flush=True)
         except KeyboardInterrupt:
             print("Training interrupted by user!")
 
-        return loss_record
+        return train_loss_record, validation_loss_record
     
-    def _train_epoch(self, trainloader, mini_batch):
+    def _train_epoch(self, trainloader):
         """ Training each epoch.
         Parameters:
         1. trainloader: Training dataloader for the optimizer.
@@ -110,10 +97,10 @@ class Trainer():
             epoch_loss(float): Loss calculated for each epoch.
         """
 
-        epoch_loss, batch_loss, batch_iteration = 0, 0, 0
+        epoch_loss, batch_iteration = 0, 0
 
         # Write a training loop. You can check exercise 1 for a standard training loop.
-        for batch, data in enumerate(trainloader):
+        for data in trainloader:
 
             # Keeping track how many iteration is happening.
             batch_iteration += 1
@@ -123,29 +110,40 @@ class Trainer():
                     "input_image": data["input_image"].to(self.device),
                     "output_image": data["output_image"].to(self.device)}
 
-            # Clearing gradients of optimizer.
-            self.optimizer.zero_grad()
-
-            # Calculation loss using closure.
-            loss_value = self.closure(self.model, data)
-            loss_value.backward()
-
-            # Optimizing the network parameters.
-            self.optimizer.step()
-
-            # Updating the running training loss
-            epoch_loss += loss_value.item()
-            batch_loss += loss_value.item()
-
-            # Printing batch logs if any.
-            if mini_batch:
-                if (batch+1) % mini_batch == 0:
-                    batch_loss = batch_loss / (mini_batch*trainloader.batch_size)
-                    print(f'Batch: {batch+1:02d},\tBatch Loss: {batch_loss:.7f}')
-                    batch_loss = 0
+            epoch_loss += self.compute_loss(data, do_step=True)
 
         epoch_loss = epoch_loss/(batch_iteration*trainloader.batch_size)
         return epoch_loss
+    
+    def _validate_epoch(self, validation_loader):
+        """ Training each epoch.
+        Parameters:
+        1. validation_loader: Validation dataloader.
+
+        Returns:
+            validation loss(float): Loss calculated for each epoch.
+        """
+
+        validation_loss, batch_iteration = 0, 0
+
+        # Write a training loop. You can check exercise 1 for a standard training loop.
+        for data in validation_loader:
+
+            # Keeping track how many iteration is happening.
+            batch_iteration += 1
+
+            # Loading data to device used.
+            data = {"index": data["index"],
+                    "input_image": data["input_image"].to(self.device),
+                    "output_image": data["output_image"].to(self.device)}
+            # Dont calculate gradient
+            self.compute_loss(data, do_step=False)
+            # Clearing gradients of optimizer.
+            validation_loss += self.optimizer.zero_grad()
+
+        validation_loss = validation_loss/(batch_iteration*validation_loader.batch_size)
+        return validation_loss
+    
 
     def test(self, testloader):
         """ 
@@ -213,15 +211,13 @@ class Trainer():
 
         return input_image, pred, output_image, original_score, improved_score
 
-    def _psnr(self, predicted, target):
-        """
-        Predicted: the prediction from the model.
-        Target: the groud truth.
-        """
-        mse = np.mean((predicted - target) ** 2) 
-        if(mse == 0):  # MSE is zero means no noise is present in the signal . 
-                    # Therefore PSNR have no importance. 
-            return 100
-        max_pixel = 16800
-        psnr = 20 * np.log10(max_pixel / np.sqrt(mse)) 
-        return psnr 
+
+    def create_optimizers(self, learning_rate=1e-3, weightdecay=0):
+        # function to initialize optimizers
+        pass
+    
+    def compute_loss(self, data, do_step=True):
+        # function to calculate loss
+        # If do_step is True, step down the gradient
+        pass
+    
