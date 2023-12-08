@@ -64,7 +64,7 @@ class Trainer():
                 self.optimizer, factor=0.85, patience=2, verbose=True)
         elif scheduler == "cosine":
             self.scheduler = SchedulerWrapper(optim.lr_scheduler.CosineAnnealingLR(
-                self.optimizer, epochs - warmup, 0.1*learning_rate
+                self.optimizer, epochs - warmup, 0.01*learning_rate
             ))
         else:
             raise KeyError(f"Unknown scheduler {scheduler}")

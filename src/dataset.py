@@ -100,13 +100,17 @@ class ImageDataset(Dataset):
         input_image, output_image = self.default_transformation(input_image, output_image)
         # normalize input
         if self.normalize == "standard":
-            input_image = (input_image - input_image.mean()) / input_image.std()
+            mean = input_image.mean()
+            std = input_image.std()
+            input_image = (input_image - mean) / std
             if self.normalize_output:
-                output_image = (output_image - output_image.mean()) / output_image.std()
+                output_image = (output_image - mean) / std
         elif self.normalize == "minmax":
-            input_image = (input_image - input_image.min()) / (input_image.max() - input_image.min())
+            mi = input_image.min()
+            ma = input_image.max()
+            input_image = (input_image - mi) / (ma - mi)
             if self.normalize_output:
-                output_image = (output_image - output_image.min()) / (output_image.max() - output_image.min())
+                output_image = (output_image - mi) / (ma - mi)
         
         #create sample to return
         sample = {'index': int(index), 'input_image': input_image, 'output_image': output_image}
