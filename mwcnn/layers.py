@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+# Adapted from
 # https://github.com/pminhtam/MWCNN/tree/main
 
 def default_conv(in_channels, out_channels, kernel_size, bias=True, dilation=1):

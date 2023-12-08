@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+# Adapted from:
 # https://github.com/dongheehand/SRGAN-PyTorch/tree/master
 
 

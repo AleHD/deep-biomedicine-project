@@ -2,6 +2,9 @@ import torch
 import torchvision
 import torch.nn.functional as F
 
+# adapted from
+# https://gist.github.com/alper111/8233cdb0414b4cb5853f2f730ab95a49#file-vgg_perceptual_loss-py
+
 class VGGPerceptualLoss(torch.nn.Module):
     def __init__(self, resize=True):
         super(VGGPerceptualLoss, self).__init__()
@@ -74,6 +77,6 @@ class FFTloss(torch.nn.Module):
         else:
             pred_amp, pred_pha = calculate_fft(pred)
             target_amp, target_pha = calculate_fft(target)
-        loss = self.criterion(pred_amp, target_amp) #+ 0.5*self.criterion(pred_pha, target_pha)
+        loss = 0.5 * self.criterion(pred_amp, target_amp) + 0.5*self.criterion(pred_pha, target_pha)
         return loss
     
