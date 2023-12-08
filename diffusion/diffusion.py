@@ -5,9 +5,9 @@ from tqdm.auto import tqdm
 from torch.utils.data import Dataset, DataLoader
 from matplotlib import pyplot as plt
 
-from src import Trainer
 from src.dataset import get_splits
 from denoising_diffusion import DiffusionModel
+from diffusion_trainer import DiffusionTrainer
 
 DATASETS = ["e9_5_GLM87a_cycle1_8_8"]
 DATA_ROOT = "/home/alehc/Téléchargements/mip_edof"
@@ -111,7 +111,7 @@ def get_pretrained(path: str = "model.pt") -> DiffusionModel:
 
 def main():
     # Load dataset and make dataloaders.
-    dset, dset_test = get_splits("data", normalize="minmax", normalize_output=True)
+    dset, dset_test = get_splits("data", normalize="minmax")
     loader = torch.utils.data.DataLoader(dset, batch_size=1, shuffle=True)
     print("Dataset length:", len(dset))
 
@@ -123,9 +123,8 @@ def main():
 
     # Start training.
     model = model.train()
-    trainer = Trainer(model, None, DEVICE, closure=lambda model, batch: model.closure(batch))
-    history = trainer.train(50, loader, weight_decay=0.0, learning_rate=1e-3,
-                            scheduler="cosine", warmup=0.2, mini_batch=50)
+    trainer = DiffusionTrainer(model, learning_rate=1e-3, weight_decay=0.0)
+    history = trainer.train(50, loader, scheduler="cosine", warmup=0.2)
     model = model.eval()
 
     # Save model.
