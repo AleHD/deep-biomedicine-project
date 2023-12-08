@@ -1,4 +1,4 @@
-import torch
+import torch, gc
 import torch.optim as optim
 
 import numpy as np
@@ -14,7 +14,7 @@ class SchedulerWrapper:
 
 
 class Trainer():
-    def __init__(self, model, learning_rate, device, closure=None):
+    def __init__(self, model, learning_rate, device):
         """ 
         The Trainer need to receive the model and the device.
         """
@@ -62,8 +62,6 @@ class Trainer():
         
         print('Starting Training Process')
 
-        self.model.train()
-
         # Epoch Loop
         try:
             for epoch in range(epochs):
@@ -82,6 +80,10 @@ class Trainer():
                 print(f'Epoch: {epoch+1:03d},  ', end='', flush=True)
                 print(f'Train Loss:{epoch_loss:.7f},  ', end='', flush=True)
                 print(f'Validation Loss:{validation_loss:.7f},  ', end='', flush=True)
+                
+            gc.collect()
+            torch.cuda.empty_cache()
+            
         except KeyboardInterrupt:
             print("Training interrupted by user!")
 
@@ -137,9 +139,7 @@ class Trainer():
                     "input_image": data["input_image"].to(self.device),
                     "output_image": data["output_image"].to(self.device)}
             # Dont calculate gradient
-            self.compute_loss(data, do_step=False)
-            # Clearing gradients of optimizer.
-            validation_loss += self.optimizer.zero_grad()
+            validation_loss += self.compute_loss(data, do_step=False)
 
         validation_loss = validation_loss/(batch_iteration*validation_loader.batch_size)
         return validation_loss
