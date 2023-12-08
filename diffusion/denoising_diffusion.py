@@ -1,7 +1,6 @@
 import torch
 from torch import nn
 from denoising_diffusion_pytorch import Unet
-from torch.nn import functional as F
 
 
 class DiffusionModel(nn.Module):
@@ -29,15 +28,6 @@ class DiffusionModel(nn.Module):
 
     def predict(self, x_T: torch.Tensor) -> torch.Tensor:
         return self(x_T.to(self.device)).to(x_T.device)
-
-    def closure(self, batch: dict) -> torch.Tensor:
-        x_0 = batch["output_image"].to(self.dtype)
-        x_T = batch["input_image"].to(self.dtype)
-        t = torch.randint(0, self.steps + 1, (x_0.size(0),), device=self.device,
-                          dtype=torch.long)
-        alpha = t.to(self.dtype)/self.steps
-        x_t = (1 - alpha)*x_0 + alpha*x_T
-        return F.l1_loss(x_0, self.x0(x_t, x_T, t))
 
     @property
     def dtype(self):
