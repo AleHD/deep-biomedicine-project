@@ -13,6 +13,11 @@ class DiffusionTrainer(Trainer):
                                           weight_decay=weight_decay)
 
     def compute_loss(self, batch, do_step=True):
+        if do_step:
+            self.model = self.model.train()
+        else:
+            self.model = self.model.eval()
+
         self.optimizer.zero_grad()
         x_0 = batch["output_image"].to(self.model.dtype)
         x_T = batch["input_image"].to(self.model.dtype)
