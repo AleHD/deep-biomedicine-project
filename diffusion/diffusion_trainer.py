@@ -1,12 +1,13 @@
 import torch
 from torch.nn import functional as F
 
-from src import Trainer
+from src.training import Trainer
 
 
 class DiffusionTrainer(Trainer):
     def __init__(self, model, learning_rate=1e-3, weight_decay=0.0):
         self.model = model
+        self.learning_rate = learning_rate
         self.optimizer = torch.optim.Adam(self.model.parameters(),
                                           lr=learning_rate,
                                           weight_decay=weight_decay)

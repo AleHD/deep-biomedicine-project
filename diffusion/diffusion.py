@@ -1,13 +1,14 @@
 import numpy as np
 import torch
-from denoising_diffusion_pytorch import Unet
 from tqdm.auto import tqdm
 from torch.utils.data import Dataset, DataLoader
 from matplotlib import pyplot as plt
 
 from src.dataset import get_splits
-from denoising_diffusion import DiffusionModel
-from diffusion_trainer import DiffusionTrainer
+from .denoising_diffusion import DiffusionModel
+from .diffusion_trainer import DiffusionTrainer
+from .unet import Unet
+
 
 DATASETS = ["e9_5_GLM87a_cycle1_8_8"]
 DATA_ROOT = "/home/alehc/Téléchargements/mip_edof"
@@ -105,7 +106,7 @@ def get_model() -> DiffusionModel:
 
 def get_pretrained(path: str = "model.pt") -> DiffusionModel:
     model = get_model()
-    model.load_state_dict(torch.load(path))
+    model.load_state_dict(torch.load(path, map_location="cpu"))
     return model.eval().requires_grad_(False).bfloat16()
 
 

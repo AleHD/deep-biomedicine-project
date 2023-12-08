@@ -1,7 +1,6 @@
 import torch
 from torch import nn
 from denoising_diffusion_pytorch import Unet
-from torch.nn import functional as F
 
 
 class DiffusionModel(nn.Module):
