@@ -1,4 +1,3 @@
-import os
 import copy
 from collections import defaultdict
 from typing import Callable, Optional
@@ -76,7 +75,7 @@ def evaluate(model: Callable[[torch.Tensor], torch.Tensor], dataset: ImageDatase
                 y_cropped = y[:, :, i : i+im_size, j : j+im_size]
                 x_cropped_processed, _ = apply_preprocessing(x_cropped)
 
-                pred_processed = model(x_cropped.to(DEVICE)).cpu()
+                pred_processed = model(x_cropped_processed.to(DEVICE)).cpu()
                 _, pred = apply_preprocessing(x_cropped, pred=pred_processed)
 
                 dif = (pred - y_cropped).view(batch_size, -1)
@@ -93,10 +92,10 @@ def evaluate(model: Callable[[torch.Tensor], torch.Tensor], dataset: ImageDatase
 
 def main():
     # Evaluate baseline.
-    print("Evaluating baseline")
-    dset, dset_test = get_splits("data")
+    print("Evaluating identity")
+    _, dset_test = get_splits("data")
     results = evaluate(lambda x: x, dset_test, dset_config={"normalize": "none"})
-    print("Baseline")
+    print("Identity")
     print(results)
 
     # Evaluate diffusion.

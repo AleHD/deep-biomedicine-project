@@ -1,16 +1,13 @@
 import numpy as np
 import torch
-from denoising_diffusion_pytorch import GaussianDiffusion, Unet
-from torch import nn
+from denoising_diffusion_pytorch import Unet
 from tqdm.auto import tqdm
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import Dataset, DataLoader
 from matplotlib import pyplot as plt
-from torch.nn import functional as F
 
-from src import ImageDataset, Trainer
-from denoising_diffusion import DiffusionModel
-
+from src import Trainer
 from src.dataset import get_splits
+from denoising_diffusion import DiffusionModel
 
 DATASETS = ["e9_5_GLM87a_cycle1_8_8"]
 DATA_ROOT = "/home/alehc/Téléchargements/mip_edof"
@@ -18,6 +15,7 @@ IMG_SIZE = 1024
 MAX_IMG_SIZE = 2048
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
 
 def psnr(predicted, target, max_pixel=1):
     mse = np.mean((predicted - target) ** 2) 
@@ -126,8 +124,8 @@ def main():
     # Start training.
     model = model.train()
     trainer = Trainer(model, None, DEVICE, closure=lambda model, batch: model.closure(batch))
-    history = trainer.train(5, loader, weight_decay=0.0, learning_rate=1e-3,
-                            scheduler="cosine", warmup=0.2, mini_batch=10)
+    history = trainer.train(50, loader, weight_decay=0.0, learning_rate=1e-3,
+                            scheduler="cosine", warmup=0.2, mini_batch=50)
     model = model.eval()
 
     # Save model.
