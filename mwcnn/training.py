@@ -5,7 +5,7 @@ import numpy as np
 from src.training import Trainer
 
 class MWCNNTrainer(Trainer):
-    def __init__(self, model, learning_rate, device, local_criterion, global_criterion=None, scale=None):
+    def __init__(self, model, learning_rate, model_file, device, local_criterion, global_criterion=None, scale=None):
         """ 
         Initate trainer
         Parameters:
@@ -30,6 +30,8 @@ class MWCNNTrainer(Trainer):
             self.scale = scale
         else:
             self.global_criterion = None
+            
+        self.model_file = model_file
             
     def compute_loss(self, data, do_step=True):
         

@@ -5,7 +5,7 @@ from src.loss_functions import VGGPerceptualLoss
 from src.training import Trainer
 
 class GANTrainer(Trainer):
-    def __init__(self, model, discriminator, device, learning_rate):
+    def __init__(self, model, model_file, discriminator, device, learning_rate):
         """ 
         The Trainer need to receive the model and the device.
         """
@@ -14,7 +14,7 @@ class GANTrainer(Trainer):
         # discriminator to distinguish nosiy from sharp
         self.discriminator = discriminator
         self.device = device
-        
+        self.model_file = model_file
         self.learning_rate = learning_rate
         # loss functions
         self.l1_loss = torch.nn.L1Loss()

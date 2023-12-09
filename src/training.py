@@ -14,7 +14,7 @@ class SchedulerWrapper:
 
 
 class Trainer():
-    def __init__(self, model, learning_rate, device):
+    def __init__(self, model, learning_rate, device, model_file):
         """ 
         The Trainer need to receive the model and the device.
         """
@@ -22,6 +22,7 @@ class Trainer():
         self.model = model
         self.device = device
         self.learning_rate = learning_rate
+        self.model_file = model_file
 
     def train(self, epochs, trainloader, validation_loader,
               scheduler="plateau", warmup=0.0):
@@ -74,11 +75,11 @@ class Trainer():
 
                 # Training a single epoch
                 epoch_loss = self._train_epoch(trainloader)
-                validation_loss = self._validate_epoch(validation_loader)
+                validation_epoch_loss = self._validate_epoch(validation_loader)
         
                 # Collecting all epoch loss values for future visualization.
                 train_loss_record.append(epoch_loss)
-                validation_loss_record.append(validation_loss)
+                validation_loss_record.append(validation_epoch_loss)
 
                 # Reduce LR On Plateau
                 self.scheduler.step(epoch_loss)
@@ -98,11 +99,12 @@ class Trainer():
 
                 # Load the best model state dict 
                 self.model.load_state_dict(best_model_state_dict)
-
+                torch.save(self.model, self.model_file)
+                
                 # Training Logs printed.
                 print(f'Epoch: {epoch+1:03d},  ', end='', flush=True)
                 print(f'Train Loss:{epoch_loss:.7f},  ', end='', flush=True)
-                print(f'Validation Loss:{validation_loss:.7f},  ', end='', flush=True)
+                print(f'Validation Loss:{validation_epoch_loss:.7f},  ', end='', flush=True)
                 
             gc.collect()
             torch.cuda.empty_cache()
