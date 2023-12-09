@@ -1,9 +1,10 @@
 from torch.utils.data import Dataset
 from torchvision.transforms import v2
 import torch
-
+import numpy as np
 from os import listdir
 from os.path import isfile, join
+from pathlib import Path
 
 from PIL import Image
 
@@ -24,7 +25,6 @@ def get_files(directory, keyword):
     for file in sorted(listdir(directory)):
         if isfile(join(directory, file)) and keyword in file:
             file_list.append(join(directory, file))
-
     return file_list
 
 
@@ -54,8 +54,11 @@ class ImageDataset(Dataset):
             directory = join(root_dir, dataset)
             self.mip_files += get_files(directory, 'mip')
             self.edof_files += get_files(directory, 'edof')
-            
-        
+        assert len(self.mip_files) == len(self.edof_files)
+        for mf, ef in zip(self.mip_files, self.edof_files):
+            ef = Path(ef).parent/Path(ef).name.replace("edof", "mip")
+            assert str(Path(mf)) == str(ef), f"{mf} != {ef}"
+
         
         # set image size
         self.image_size= image_size
@@ -93,9 +96,15 @@ class ImageDataset(Dataset):
         input_image, output_image = self.default_transformation(input_image, output_image)
         # normalize input
         if self.normalize == "standard":
-            input_image = (input_image - input_image.mean()) / input_image.std()
+            mean = input_image.mean()
+            std = input_image.std()
+            input_image = (input_image - mean) / std
+            output_image = (output_image - mean) / std
         elif self.normalize == "minmax":
-            input_image = (input_image - input_image.min()) / (input_image.max() - input_image.min())
+            mi = input_image.min()
+            ma = input_image.max()
+            input_image = (input_image - mi) / (ma - mi)
+            output_image = (output_image - mi) / (ma - mi)
         
         #create sample to return
         sample = {'index': int(index), 'input_image': input_image, 'output_image': output_image}
@@ -118,3 +127,7 @@ class ImageDataset(Dataset):
         size_of_dataset = int(len(self.edof_files))
            
         return size_of_dataset
+
+    
+def get_splits(path: str, **kwargs) -> tuple[ImageDataset, ImageDataset]:
+    return ImageDataset(path, ["train"], **kwargs), ImageDataset(path, ["val"], **kwargs)

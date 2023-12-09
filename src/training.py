@@ -1,24 +1,30 @@
-import torch
+import torch, gc
 import torch.optim as optim
 
 import numpy as np
 
+
+class SchedulerWrapper:
+    def __init__(self, scheduler):
+        self.scheduler = scheduler
+        self.optimizer = self.scheduler.optimizer
+
+    def step(self, loss=None):
+        self.scheduler.step()
+
+
 class Trainer():
-    def __init__(self, model, criterion, device):
+    def __init__(self, model, learning_rate, device):
         """ 
         The Trainer need to receive the model and the device.
         """
 
         self.model = model
         self.device = device
+        self.learning_rate = learning_rate
 
-        # we use Dice-loss as our loss function in this exercise.
-        # ToDo 0: Check the following links for more details of Dice loss:
-        # 1. https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient
-        # 2. https://dev.to/_aadidev/3-common-loss-functions-for-image-segmentation-545o
-        self.criterion = criterion
-
-    def train(self, epochs, trainloader, mini_batch=None, learning_rate=0.001):
+    def train(self, epochs, trainloader, validation_loader,
+              scheduler="plateau", warmup=0.0):
 
         """ 
         Train the model.
@@ -33,40 +39,80 @@ class Trainer():
         1. history(dict): 'train_loss': List of loss at every epoch.
         """
 
-        # For recording the loss value.
-        loss_record = []
+        #Early stopping parameters
+        patience = 10
+        best_val_loss = float('inf')
+        best_model_state_dict = None
+        counter_since_improvement = 0
 
-        # ToDo 1: We choose Adam to be the optimizer.
-        # Link to all the optimizers in torch.optim: https://pytorch.org/docs/stable/optim.html
-        self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
+        # For recording the loss value.
+        train_loss_record, validation_loss_record = [], []
         
         # Reducing LR on plateau feature to improve training.
-        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            self.optimizer, factor=0.85, patience=1, verbose=True)
+        warmup = int(warmup*epochs)
+        if scheduler == "plateau":
+            self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+                self.optimizer, factor=0.85, patience=2, verbose=True)
+        elif scheduler == "cosine":
+            self.scheduler = SchedulerWrapper(optim.lr_scheduler.CosineAnnealingLR(
+                self.optimizer, epochs - warmup, 0.01*self.learning_rate
+            ))
+        else:
+            raise KeyError(f"Unknown scheduler {scheduler}")
+
+        if warmup > 0:
+            self.scheduler = SchedulerWrapper(optim.lr_scheduler.ChainedScheduler([
+                optim.lr_scheduler.LinearLR(self.optimizer, 0.1, total_iters=warmup),
+                self.scheduler
+            ]))
         
         print('Starting Training Process')
 
-        self.model.train()
-
         # Epoch Loop
-        for epoch in range(epochs):
+        try:
+            for epoch in range(epochs):
 
-            # Training a single epoch
-            epoch_loss = self._train_epoch(trainloader, mini_batch)
+                # Training a single epoch
+                epoch_loss = self._train_epoch(trainloader)
+                validation_loss = self._validate_epoch(validation_loader)
+        
+                # Collecting all epoch loss values for future visualization.
+                train_loss_record.append(epoch_loss)
+                validation_loss_record.append(validation_loss)
 
-            # Collecting all epoch loss values for future visualization.
-            loss_record.append(epoch_loss)
+                # Reduce LR On Plateau
+                self.scheduler.step(epoch_loss)
 
-            # Reduce LR On Plateau
-            self.scheduler.step(epoch_loss)
+                if validation_epoch_loss < best_val_loss:
+                    best_val_loss = validation_epoch_loss
+                    best_model_state_dict = self.model.state_dict()
+                    counter_since_improvement = 0
+                else:
+                    counter_since_improvement += 1
 
-            # Training Logs printed.
-            print(f'Epoch: {epoch+1:03d},  ', end='')
-            print(f'Loss:{epoch_loss:.7f},  ', end='\n')
 
-        return loss_record
+                # Early stopping check
+                if counter_since_improvement >= patience:
+                    print(f'Early stopping after {patience} epochs without improvement.')
+                    break
+
+                # Load the best model state dict 
+                self.model.load_state_dict(best_model_state_dict)
+
+                # Training Logs printed.
+                print(f'Epoch: {epoch+1:03d},  ', end='', flush=True)
+                print(f'Train Loss:{epoch_loss:.7f},  ', end='', flush=True)
+                print(f'Validation Loss:{validation_loss:.7f},  ', end='', flush=True)
+                
+            gc.collect()
+            torch.cuda.empty_cache()
+            
+        except KeyboardInterrupt:
+            print("Training interrupted by user!")
+
+        return train_loss_record, validation_loss_record
     
-    def _train_epoch(self, trainloader, mini_batch):
+    def _train_epoch(self, trainloader):
         """ Training each epoch.
         Parameters:
         1. trainloader: Training dataloader for the optimizer.
@@ -76,46 +122,51 @@ class Trainer():
             epoch_loss(float): Loss calculated for each epoch.
         """
 
-        epoch_loss, batch_loss, batch_iteration = 0, 0, 0
+        epoch_loss, batch_iteration = 0, 0
 
         # Write a training loop. You can check exercise 1 for a standard training loop.
-        for batch, data in enumerate(trainloader):
+        for data in trainloader:
 
             # Keeping track how many iteration is happening.
             batch_iteration += 1
 
             # Loading data to device used.
-            image = data['input_image'].to(self.device)
-            mask = data['output_image'].to(self.device)
+            data = {"index": data["index"],
+                    "input_image": data["input_image"].to(self.device),
+                    "output_image": data["output_image"].to(self.device)}
 
-            # Clearing gradients of optimizer.
-            self.optimizer.zero_grad()
-
-            # Calculation predicted output using forward pass.
-            output = self.model(image)
-
-            # Calculating the loss value.
-            # Hint: self.criterion
-            loss_value = self.criterion(output, mask)
-            # ToDo 6: Computing the gradients.
-            loss_value.backward()
-
-            # Optimizing the network parameters.
-            self.optimizer.step()
-
-            # Updating the running training loss
-            epoch_loss += loss_value.item()
-            batch_loss += loss_value.item()
-
-            # Printing batch logs if any.
-            if mini_batch:
-                if (batch+1) % mini_batch == 0:
-                    batch_loss = batch_loss / (mini_batch*trainloader.batch_size)
-                    print(f'Batch: {batch+1:02d},\tBatch Loss: {batch_loss:.7f}')
-                    batch_loss = 0
+            epoch_loss += self.compute_loss(data, do_step=True)
 
         epoch_loss = epoch_loss/(batch_iteration*trainloader.batch_size)
         return epoch_loss
+    
+    def _validate_epoch(self, validation_loader):
+        """ Training each epoch.
+        Parameters:
+        1. validation_loader: Validation dataloader.
+
+        Returns:
+            validation loss(float): Loss calculated for each epoch.
+        """
+
+        validation_loss, batch_iteration = 0, 0
+
+        # Write a training loop. You can check exercise 1 for a standard training loop.
+        for data in validation_loader:
+
+            # Keeping track how many iteration is happening.
+            batch_iteration += 1
+
+            # Loading data to device used.
+            data = {"index": data["index"],
+                    "input_image": data["input_image"].to(self.device),
+                    "output_image": data["output_image"].to(self.device)}
+            # Dont calculate gradient
+            validation_loss += self.compute_loss(data, do_step=False)
+
+        validation_loss = validation_loss/(batch_iteration*validation_loader.batch_size)
+        return validation_loss
+    
 
     def test(self, testloader):
         """ 
@@ -131,6 +182,7 @@ class Trainer():
 
         You do not need to change this function.
         """
+
         self.model.eval()
 
         test_data_indexes = testloader.sampler.indices[:]
@@ -182,15 +234,13 @@ class Trainer():
 
         return input_image, pred, output_image, original_score, improved_score
 
-    def _psnr(self, predicted, target):
-        """
-        Predicted: the prediction from the model.
-        Target: the groud truth.
-        """
-        mse = np.mean((predicted - target) ** 2) 
-        if(mse == 0):  # MSE is zero means no noise is present in the signal . 
-                    # Therefore PSNR have no importance. 
-            return 100
-        max_pixel = 16800
-        psnr = 20 * np.log10(max_pixel / np.sqrt(mse)) 
-        return psnr 
+
+    def create_optimizers(self, learning_rate=1e-3, weightdecay=0):
+        # function to initialize optimizers
+        pass
+    
+    def compute_loss(self, data, do_step=True):
+        # function to calculate loss
+        # If do_step is True, step down the gradient
+        pass
+    

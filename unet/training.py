@@ -1,5 +1,5 @@
 import torch
-import utils
+import unet.utils
 import torch.optim as optim
 import os
 import numpy as np
@@ -67,7 +67,6 @@ class Trainer():
                 # Collecting all epoch loss values for future visualization.
                 train_loss_record.append(training_epoch_loss)
                 validation_loss_record.append(validation_epoch_loss)
-
                 # Reduce LR On Plateau
                 #self.scheduler.step(training_epoch_loss)
 
@@ -213,7 +212,7 @@ class Trainer():
             # Printing batch logs if any.
             if mini_batch:
                 if (batch+1) % mini_batch == 0:
-                    batch_loss = batch_loss / (mini_batch*trainloader.batch_size)
+                    batch_loss = batch_loss / (mini_batch*validationloader.batch_size)
                     print(f'Batch: {batch+1:02d},\tBatch Loss: {batch_loss:.7f}')
                     batch_loss = 0
 
