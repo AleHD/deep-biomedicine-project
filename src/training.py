@@ -39,6 +39,12 @@ class Trainer():
         1. history(dict): 'train_loss': List of loss at every epoch.
         """
 
+        #Early stopping parameters
+        patience = 10
+        best_val_loss = float('inf')
+        best_model_state_dict = None
+        counter_since_improvement = 0
+
         # For recording the loss value.
         train_loss_record, validation_loss_record = [], []
         
@@ -73,8 +79,25 @@ class Trainer():
                 # Collecting all epoch loss values for future visualization.
                 train_loss_record.append(epoch_loss)
                 validation_loss_record.append(validation_loss)
+
                 # Reduce LR On Plateau
                 self.scheduler.step(epoch_loss)
+
+                if validation_epoch_loss < best_val_loss:
+                    best_val_loss = validation_epoch_loss
+                    best_model_state_dict = self.model.state_dict()
+                    counter_since_improvement = 0
+                else:
+                    counter_since_improvement += 1
+
+
+                # Early stopping check
+                if counter_since_improvement >= patience:
+                    print(f'Early stopping after {patience} epochs without improvement.')
+                    break
+
+                # Load the best model state dict 
+                self.model.load_state_dict(best_model_state_dict)
 
                 # Training Logs printed.
                 print(f'Epoch: {epoch+1:03d},  ', end='', flush=True)
