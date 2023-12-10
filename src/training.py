@@ -1,3 +1,5 @@
+import time
+
 import torch, gc
 import torch.optim as optim
 
@@ -70,6 +72,7 @@ class Trainer():
         print('Starting Training Process')
 
         # Epoch Loop
+        t0 = time.time()
         try:
             for epoch in range(epochs):
 
@@ -78,15 +81,15 @@ class Trainer():
                 validation_epoch_loss = self._validate_epoch(validation_loader)
         
                 # Collecting all epoch loss values for future visualization.
-                train_loss_record.append(epoch_loss)
-                validation_loss_record.append(validation_epoch_loss)
+                train_loss_record.append(epoch_loss.item())
+                validation_loss_record.append(validation_epoch_loss.item())
 
                 # Reduce LR On Plateau
                 self.scheduler.step(epoch_loss)
 
                 if validation_epoch_loss < best_val_loss:
                     best_val_loss = validation_epoch_loss
-                    best_model_state_dict = self.model.state_dict()
+                    # best_model_state_dict = self.model.state_dict()
                     counter_since_improvement = 0
                 else:
                     counter_since_improvement += 1
@@ -98,13 +101,16 @@ class Trainer():
                     break
 
                 # Load the best model state dict 
-                self.model.load_state_dict(best_model_state_dict)
-                torch.save(self.model, self.model_file)
+                # self.model.load_state_dict(best_model_state_dict)
+                # torch.save(self.model, self.model_file)
                 
                 # Training Logs printed.
+                elapsed = int(time.time() - t0)
+                elapsed = f"{elapsed//60//60}h{(elapsed//60) % 60}m{elapsed % 60}s"
                 print(f'Epoch: {epoch+1:03d},  ', end='', flush=True)
                 print(f'Train Loss:{epoch_loss:.7f},  ', end='', flush=True)
                 print(f'Validation Loss:{validation_epoch_loss:.7f},  ', end='', flush=True)
+                print('Time training:', elapsed)
                 
             gc.collect()
             torch.cuda.empty_cache()
@@ -164,7 +170,8 @@ class Trainer():
                     "input_image": data["input_image"].to(self.device),
                     "output_image": data["output_image"].to(self.device)}
             # Dont calculate gradient
-            validation_loss += self.compute_loss(data, do_step=False)
+            with torch.no_grad():
+                validation_loss += self.compute_loss(data, do_step=False)
 
         validation_loss = validation_loss/(batch_iteration*validation_loader.batch_size)
         return validation_loss

@@ -1,4 +1,4 @@
-# Adapted from https://github.com/lucidrains/denoising-diffusion-pytorch/blob/main/denoising_diffusion_pytorch/denoising_diffusion_pytorch.py
+# Adapted from https://github.com/lucidrains/denoising-diffusion-pytorch/blob/main/denoising_diffusion_pytorch/denoising_diffusion_pytorch.py to support bfloat16 computation
 import math
 import copy
 from pathlib import Path
@@ -113,12 +113,12 @@ class SinusoidalPosEmb(nn.Module):
     def __init__(self, dim, theta = 10000):
         super().__init__()
         self.dim = dim
-        self.register_buffer("theta", torch.tensor(theta, dtype=torch.long))
+        self.register_buffer("theta", torch.tensor(float(theta)))
 
     def forward(self, x):
         device = x.device
         half_dim = self.dim // 2
-        emb = math.log(self.theta) / (half_dim - 1)
+        emb = torch.log(self.theta) / (half_dim - 1)
         emb = torch.exp(torch.arange(half_dim, device=device) * -emb)
         emb = x[:, None] * emb[None, :]
         emb = torch.cat((emb.sin(), emb.cos()), dim=-1)
