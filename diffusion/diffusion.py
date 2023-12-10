@@ -104,7 +104,7 @@ def get_model() -> DiffusionModel:
     return DiffusionModel(base, steps=10, objective="x0")
 
 
-def get_pretrained(path: str = "model.pt") -> DiffusionModel:
+def get_pretrained(path: str = "diffusion/model.pt") -> DiffusionModel:
     model = get_model()
     model.load_state_dict(torch.load(path, map_location="cpu"))
     return model.eval().requires_grad_(False).bfloat16()
@@ -116,11 +116,10 @@ def main():
     loader = torch.utils.data.DataLoader(dset, batch_size=1, shuffle=True)
     print("Dataset length:", len(dset))
 
-    # Initialize unet and show dummy prediction.
+    # Initialize model.
     model = get_model().to(DEVICE).bfloat16().eval()
     n_params = sum(map(torch.numel, model.parameters()))/1000/1000
     print(f"Number of parameters: {n_params:.3f}M")
-    show_imgs(model, dset_test, n_show=5)
 
     # Start training.
     model = model.train()
@@ -129,7 +128,7 @@ def main():
     model = model.eval()
 
     # Save model.
-    torch.save(model.state_dict(), "model.pt")
+    torch.save(model.state_dict(), "diffusion/model.pt")
 
     # Show learning history.
     plt.plot(history, label="Training loss")
@@ -138,9 +137,7 @@ def main():
     plt.yscale("log")
     plt.title("Loss history")
     plt.show()
-
-    # Show image after training.
-    show_imgs(model, dset_test, n_show=5)
+    plt.savefig("diffusion/learning.png")
 
 
 if __name__ == "__main__":
