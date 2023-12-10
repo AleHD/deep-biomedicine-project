@@ -53,8 +53,10 @@ def psnr(predicted, target, max_pixel=16384):
     return psnr
 
 
-def plot_loss(num_epochs,train_losses, title='Training Loss Curve', label='Training Loss'):
+def plot_loss(num_epochs, train_losses, val_losses=None, title='Training Loss Curve', label='Training Loss'):
     plt.plot(range(1, num_epochs + 1), train_losses, label=label)
+    if val_losses is not None:
+        plt.plot(range(1, num_epochs + 1), val_losses, label="Validation Loss")
     plt.title(title)
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
