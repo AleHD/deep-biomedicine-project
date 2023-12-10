@@ -65,6 +65,9 @@ class MWCNN(nn.Module):
         x = self.tail(self.i_l0(x_)) + x
 
         return x
+    
+    def predict(self, x_T: torch.Tensor) -> torch.Tensor:
+        return self(x_T.to(self.device)).to(x_T.device)
 
 def get_pretrained(path: str = "mwcnn/models/none_mwcnn_feats_32.pth"):
     model = MWCNN(n_feats=32, n_colors=1, batch_normalize=True)
