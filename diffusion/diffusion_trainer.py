@@ -11,6 +11,7 @@ class DiffusionTrainer(Trainer):
         self.optimizer = torch.optim.Adam(self.model.parameters(),
                                           lr=learning_rate,
                                           weight_decay=weight_decay)
+        self.device = self.model.device
 
     def compute_loss(self, batch, do_step=True):
         if do_step:
