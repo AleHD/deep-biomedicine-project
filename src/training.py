@@ -97,9 +97,7 @@ class Trainer():
                     print(f'Early stopping after {patience} epochs without improvement.')
                     break
 
-                # Load the best model state dict 
-                self.model.load_state_dict(best_model_state_dict)
-                torch.save(self.model, self.model_file)
+                
                 
                 # Training Logs printed.
                 print(f'Epoch: {epoch+1:03d},  ', end='', flush=True)
@@ -112,6 +110,9 @@ class Trainer():
         except KeyboardInterrupt:
             print("Training interrupted by user!")
 
+        # Load the best model state dict and save the model
+        self.model.load_state_dict(best_model_state_dict)
+        torch.save(self.model, self.model_file)
         return train_loss_record, validation_loss_record
     
     def _train_epoch(self, trainloader):
