@@ -40,16 +40,11 @@ class Trainer():
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
         
         # Reducing LR on plateau feature to improve training.
-        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            self.optimizer, factor=0.85, patience=2, verbose=True)
-
-        patience = 10
-        best_val_loss = float('inf')
-        best_model_state_dict = None
-        counter_since_improvement = 0
+        #self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        #    self.optimizer, factor=0.85, patience=2, verbose=True)
         
         print('Starting Training Process')
-        if os.path.exists('models/baseline.pth'):
+        if not os.path.exists('models/baseline.pth'):
 
             self.model.train()
 
@@ -62,42 +57,24 @@ class Trainer():
                 training_epoch_loss = self._train_epoch(trainloader, mini_batch)
                 validation_epoch_loss = self._validate_epoch(validationloader, mini_batch)
 
-                
-
                 # Collecting all epoch loss values for future visualization.
                 train_loss_record.append(training_epoch_loss)
                 validation_loss_record.append(validation_epoch_loss)
 
                 # Reduce LR On Plateau
-                #self.scheduler.step(training_epoch_loss)
+                #self.scheduler.step(epoch_loss)
 
                 # Training Logs printed.
                 print(f'Epoch: {epoch+1:03d},  \n ', end='')
                 print(f'Training Loss:{training_epoch_loss:.7f},  \n  ', end='')
                 print(f'Validation Loss:{validation_epoch_loss:.7f},  \n  ', end='')
 
-                if validation_epoch_loss < best_val_loss:
-                    best_val_loss = validation_epoch_loss
-                    best_model_state_dict = self.model.state_dict()
-                    counter_since_improvement = 0
-                else:
-                    counter_since_improvement += 1
 
-
-                # Early stopping check
-                if counter_since_improvement >= patience:
-                    print(f'Early stopping after {patience} epochs without improvement.')
-                    break
-                
-
-            # Load the best model state dict and save the model
-            self.model.load_state_dict(best_model_state_dict)
-            torch.save(self.model, 'models/baseline_with_scheduler.pth')
             
                 
             
             #save the trained model
-            #torch.save(self.model, 'models/baseline.pth')
+            torch.save(self.model, 'models/baseline.pth')
 
         else:
             self.model = torch.load('models/baseline.pth')

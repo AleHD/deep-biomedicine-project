@@ -3,8 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class UNet(nn.Module):
-    
-    
+    """ 
+    For more information about U-Net Architecture check the paper here.
+    Link :- https://arxiv.org/abs/1505.04597
+    """
 
     def __init__(self, filter_num, input_channels=1, output_channels=1):
 
@@ -15,14 +17,19 @@ class UNet(nn.Module):
             output_channels: Output channels for the final network.
         """
 
-        # Call the __init__ function of its parent class
+        # Since UNet is a child class, we need to first call the __init__ function of its parent class
         super(UNet, self).__init__()
 
-        # Defining the padding and kernel size to be used.
+        # We set hyper-parameter padding and kernel size
         padding = 1
         ks = 3
 
         # Encoding Part of Network.
+        # Hint: 
+        # 1. For each block, you need two convolution layers and one maxpooling layer.
+        # 2. You can check online (torch.nn) and try nn.Conv2d and nn.MaxPool2d.
+        # Links!
+
         # Block 1
         self.conv1_1 = nn.Conv2d(input_channels, filter_num[0], kernel_size=ks, padding=padding)
         self.conv1_2 = nn.Conv2d(filter_num[0], filter_num[0], kernel_size=ks, padding=padding)
@@ -47,7 +54,12 @@ class UNet(nn.Module):
         self.conv5_1 = nn.Conv2d(filter_num[3], filter_num[4], kernel_size=ks, padding=padding)
         self.conv5_2 = nn.Conv2d(filter_num[4], filter_num[4], kernel_size=ks, padding=padding)
 
-    
+        # Decoding Part of Network.
+        # Hint: 
+        # 1. For each block, you need two convolution layers and one upsampling layer.
+        # 2. You can check online and try nn.ConvTranspose2d for upsampling.
+        # Links!
+
         # Block 4
         self.conv6_t = nn.ConvTranspose2d(filter_num[4], filter_num[3], 2, stride=2)
         self.conv6_1 = nn.Conv2d(filter_num[4], filter_num[3], kernel_size=ks, padding=padding)
@@ -99,6 +111,7 @@ class UNet(nn.Module):
         conv5 = F.relu(self.conv5_2(conv5))
 
         # Decoding Part of Network.
+        # Hint: Do not forget to concatnate in outputs from the encoder.
 
         # Block 4
         up6 = torch.cat((self.conv6_t(conv5), conv4), dim=1)
@@ -121,6 +134,10 @@ class UNet(nn.Module):
         output = F.relu(self.conv9_2(conv9))
 
         # Output Part of Network.
+        # Hint: 
+        # 1. Segmentation is to classify each pixel into foreground or backfround. 
+        # 2. Sigmoid is a useful activate function for binary classification.
+        
         output = self.conv10(conv9)
 
         return output
