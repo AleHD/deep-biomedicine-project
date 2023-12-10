@@ -1,7 +1,9 @@
 from layers import DWT, IWT, default_conv, BBlock,DBlock_com1, DBlock_com, DBlock_inv1, DBlock_inv
 import torch.nn as nn
-
+import torch
 # https://github.com/pminhtam/MWCNN/tree/main
+
+
 
 class MWCNN(nn.Module):
     def __init__(self, n_feats=64 ,n_colors=1, batch_normalize=True, conv=default_conv):
@@ -63,3 +65,8 @@ class MWCNN(nn.Module):
         x = self.tail(self.i_l0(x_)) + x
 
         return x
+
+def get_pretrained(path: str = "mwcnn/models/none_mwcnn_feats_32.pth"):
+    model = MWCNN(n_feats=32, n_colors=1, batch_normalize=True)
+    model.load_state_dict(torch.load(path, map_location="cpu"))
+    return model.eval().requires_grad_(False).bfloat16()

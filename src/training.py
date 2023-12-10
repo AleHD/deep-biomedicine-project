@@ -81,15 +81,15 @@ class Trainer():
                 validation_epoch_loss = self._validate_epoch(validation_loader)
         
                 # Collecting all epoch loss values for future visualization.
-                train_loss_record.append(epoch_loss.item())
-                validation_loss_record.append(validation_epoch_loss.item())
+                train_loss_record.append(epoch_loss)
+                validation_loss_record.append(validation_epoch_loss)
 
                 # Reduce LR On Plateau
                 self.scheduler.step(epoch_loss)
 
                 if validation_epoch_loss < best_val_loss:
                     best_val_loss = validation_epoch_loss
-                    # best_model_state_dict = self.model.state_dict()
+                    best_model_state_dict = self.model.state_dict()
                     counter_since_improvement = 0
                 else:
                     counter_since_improvement += 1
