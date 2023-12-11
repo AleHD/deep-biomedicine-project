@@ -114,12 +114,15 @@ def save_individual_results(results, save_path="results/"):
     """
     for i in range(len(results)):
         psnr_ = psnr(results[i]["MIP"], results[i]["EDOF"])
-        im = Image.fromarray(results[i]["MIP"])
-        im.save(f"{save_path}{i}_MIP_{psnr_:.3f}.png")
-        im = Image.fromarray(results[i]["EDOF"])
-        im.save(f"{save_path}{i}_EDOF.png")
+        im = Image.fromarray(results[i]["MIP"]).convert('RGB')
+        path = f"{save_path}{i}_MIP_{psnr_}.png"
+        im.save(path)
+        im = Image.fromarray(results[i]["EDOF"]).convert('RGB')
+        path = f"{save_path}{i}_EDOF.png"
+        im.save(path)
 
         for j, key in enumerate(filter(lambda name: name not in {"MIP", "EDOF"}, results[i])):
-            psnr_ = psnr(results[i][key], results[i]["EDOF"])
+            psnr_ = psnr(results[i][key], results[i]["EDOF"]).convert('RGB')
             im = Image.fromarray(results[i][key])
-            im.save(f"{save_path}{i}_{key}_{psnr_:.3f}.png")
+            path = f"{save_path}{i}_{key}_{psnr_}.png"
+            im.save(path)

@@ -1,9 +1,7 @@
 import sys
-sys.path.insert(0,".")
-
 from model import UNet
 from unet_trainer import *
-from src.dataset import get_splits , ImageDataset 
+from src.dataset import ImageDataset 
 from src.utils import get_indices
 from torch.utils.data import Dataset, DataLoader ,SubsetRandomSampler
 
@@ -84,7 +82,7 @@ def main():
     # Dataset part used for testing
     VALIDATION_SPLIT = 0.15
     # Batch size for training. Limited by GPU memory
-    BATCH_SIZE = 1
+    BATCH_SIZE = 3
     # Full Dataset path
     TEST_DATASETS = ['val']
     TRAIN_DATASETS = ['train']
@@ -116,11 +114,11 @@ def main():
     torch.cuda.empty_cache()
 
     # Training Epochs
-    EPOCHS = 2
+    EPOCHS = 100
     # Filters used in UNet Model
     filter_num = [16,32,64,128,256]
 
-    MODEL_NAME = f"models/Seif-UNet-{filter_num}.pt"
+    MODEL_NAME = f"unet/models/full-UNet-{filter_num}.pt"
 
     unet_model = UNet(filter_num).to(DEVICE)
 
@@ -138,17 +136,12 @@ def main():
     # Show learning history.
     plt.plot(history[0], label="Training loss")
     plt.plot(history[1], label="Validation loss")
-    
- 
-    
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    
     plt.title("Loss history")
-    plt.show()
+    plt.legend()
+    plt.savefig("unet/unet_loss.png", dpi=90, bbox_inches='tight')
 
-    # Show image after training.
-    #show_imgs(unet_trainer, test_image_dataset, n_show=5)
 
 if __name__ == "__main__":
     torch.random.manual_seed(123456789)
