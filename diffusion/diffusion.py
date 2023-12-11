@@ -13,7 +13,7 @@ from src.dataset import get_splits
 from src.utils import plot_loss
 from denoising_diffusion import DiffusionModel
 from diffusion_trainer import DiffusionTrainer
-from unet import Unet
+from unet_model import Unet
 
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
