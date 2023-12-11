@@ -3,6 +3,7 @@ import os
 import pickle
 import matplotlib.pyplot as plt
 import torch
+from PIL import Image
 
 '''
 Nothing needs to be changed in this file unless you want to play around.
@@ -101,3 +102,24 @@ def plot_result(results, title, save_path=None):
         plt.savefig(save_path, dpi=90, bbox_inches='tight')
 
     plt.show()
+
+
+def save_individual_results(results, save_path="results/"):
+    """
+    Saves individual results in results/N_model_psnr.png
+    Results is a list of dicts with keys: 'MIP', 'EDOF', and the rest of the keys
+    should have the name of the model that generated it.
+    Example: {'MIP': (mip image), 'EDOF': (edof image), 'GAN': (gan image),
+              'diffusion': (diffusion image)}
+    """
+    for i in range(len(results)):
+        psnr_ = psnr(results[i]["MIP"], results[i]["EDOF"])
+        im = Image.fromarray(results[i]["MIP"])
+        im.save(f"{save_path}{i}_MIP_{psnr_:.3f}.png")
+        im = Image.fromarray(results[i]["EDOF"])
+        im.save(f"{save_path}{i}_EDOF.png")
+
+        for j, key in enumerate(filter(lambda name: name not in {"MIP", "EDOF"}, results[i])):
+            psnr_ = psnr(results[i][key], results[i]["EDOF"])
+            im = Image.fromarray(results[i][key])
+            im.save(f"{save_path}{i}_{key}_{psnr_:.3f}.png")
