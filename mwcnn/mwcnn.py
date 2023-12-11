@@ -80,7 +80,7 @@ class MWCNN(nn.Module):
         return next(p.device for p in self.parameters())
     
 
-def get_pretrained(path: str = "mwcnn/models/none_mwcnn_feats_32.pth"):
-    model = MWCNN(n_feats=32, n_colors=1, batch_normalize=True)
+def get_pretrained(path: str = "mwcnn/models/none_mwcnn_feats_32.pth", n_feats=32):
+    model = MWCNN(n_feats=n_feats, n_colors=1, batch_normalize=True)
     model.load_state_dict(torch.load(path, map_location="cpu"))
     return model.eval().requires_grad_(False)

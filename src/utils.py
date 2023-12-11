@@ -81,17 +81,17 @@ def plot_result(results, title, save_path=None):
     fig.suptitle(title, x=0.5, y=0.92, fontsize=20)
     for i in range(len(results)):
         psnr_ = psnr(results[i]["MIP"], results[i]["EDOF"])
-        axs[i][0].set_title(f"Original MIP, PSNR: {psnr_:.3f}", fontdict={'fontsize': 16})
+        axs[i][0].set_title(f"Original MIP,\nPSNR: {psnr_:.3f}", fontdict={'fontsize': 10})
         axs[i][0].imshow(results[i]["MIP"], cmap='gray')
         axs[i][0].set_axis_off()
 
-        axs[i][1].set_title("Original EDOF", fontdict={'fontsize': 16})
+        axs[i][1].set_title("Original EDOF", fontdict={'fontsize': 10})
         axs[i][1].imshow(results[i]["EDOF"], cmap='gray')
         axs[i][1].set_axis_off()
 
         for j, key in enumerate(filter(lambda name: name not in {"MIP", "EDOF"}, results[i])):
             psnr_ = psnr(results[i][key], results[i]["EDOF"])
-            axs[i][j + 2].set_title(f"Denoised with {key}, PSNR: {psnr_:.3f}", fontdict={'fontsize': 16})
+            axs[i][j + 2].set_title(f"Denoised with {key},\nPSNR: {psnr_:.3f}", fontdict={'fontsize': 10})
             axs[i][j + 2].imshow(results[i][key], cmap='gray')
             axs[i][j + 2].set_axis_off()
 

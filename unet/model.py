@@ -141,3 +141,21 @@ class UNet(nn.Module):
         output = self.conv10(conv9)
 
         return output
+    
+    def predict(self, x_T: torch.Tensor) -> torch.Tensor:
+        return self(x_T.to(self.device)).to(x_T.device)
+    
+    @property
+    def dtype(self):
+        return next(p.dtype for p in self.parameters())
+
+    @property
+    def device(self):
+        return next(p.device for p in self.parameters())
+    
+
+def get_pretrained(path: str) -> UNet:
+    filter_num = [16,32,64,128,256]
+    model = UNet(filter_num=filter_num)
+    model.load_state_dict(torch.load(path, map_location="cpu"))
+    return model.eval().requires_grad_(False)
