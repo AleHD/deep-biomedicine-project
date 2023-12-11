@@ -1,4 +1,5 @@
 from layers import DWT, IWT, default_conv, BBlock,DBlock_com1, DBlock_com, DBlock_inv1, DBlock_inv
+from typing import Callable
 import torch.nn as nn
 import torch
 # Adapted from
@@ -7,7 +8,7 @@ import torch
 
 
 class MWCNN(nn.Module):
-    def __init__(self, n_feats=64 ,n_colors=1, batch_normalize=True, conv=default_conv):
+    def __init__(self, n_feats: int =64 ,n_colors: int=1, batch_normalize: bool=True, conv: Callable=default_conv):
         super(MWCNN, self).__init__()
         n_feats = n_feats
         kernel_size = 3
@@ -56,7 +57,7 @@ class MWCNN(nn.Module):
         self.i_l0 = nn.Sequential(*i_l0)
         self.tail = nn.Sequential(*m_tail)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor)-> torch.Tensor:
         x0 = self.d_l0(self.head(x))
         x1 = self.d_l1(self.DWT(x0))
         x2 = self.d_l2(self.DWT(x1))
@@ -69,8 +70,17 @@ class MWCNN(nn.Module):
     
     def predict(self, x_T: torch.Tensor) -> torch.Tensor:
         return self(x_T.to(self.device)).to(x_T.device)
+    
+    @property
+    def dtype(self):
+        return next(p.dtype for p in self.parameters())
+
+    @property
+    def device(self):
+        return next(p.device for p in self.parameters())
+    
 
 def get_pretrained(path: str = "mwcnn/models/none_mwcnn_feats_32.pth"):
     model = MWCNN(n_feats=32, n_colors=1, batch_normalize=True)
     model.load_state_dict(torch.load(path, map_location="cpu"))
-    return model.eval().requires_grad_(False).bfloat16()
+    return model.eval().requires_grad_(False)
