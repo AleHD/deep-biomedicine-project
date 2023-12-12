@@ -1,23 +1,11 @@
 from torch.utils.data import Dataset
 from torchvision.transforms import v2
 import torch
-import numpy as np
 from os import listdir
 from os.path import isfile, join
 from pathlib import Path
 
 from PIL import Image
-
-import os
-
-'''
-Here we try to build a Dataset class.
-A common way is to define a Dataset class inherits from torch.utils.data.Dataset class.
-Then, we override:
-1. __init__: initialization
-2. __getitem__: get a sample
-3. __len__: get the length (number of samples) of the dataset
-'''
 
 def get_files(directory, keyword):
     """Returns all files in directory if the file contains the keyword."""
@@ -69,7 +57,6 @@ class ImageDataset(Dataset):
             v2.RandomCrop(size=image_size),
             v2.RandomHorizontalFlip(p=0.5),
             v2.RandomVerticalFlip(p=0.5),
-            # v2.RandomRotation(degrees=180),
             v2.ToTensor(),
             v2.ToDtype(torch.float32),
         ])
@@ -86,8 +73,6 @@ class ImageDataset(Dataset):
         """
 
         # load image and mask, give each of them an index, and return image, mask, and index.
-        # input_image_name = os.path.join(self.root_dir, self.dataset + '_tile' + str(index)+'_mip.tif')
-        # output_image_name = os.path.join(self.root_dir, self.dataset + '_tile' + str(index)+'_edof.tif')
         input_image_name = self.mip_files[index]
         output_image_name = self.edof_files[index]
         input_image = Image.open(input_image_name)
@@ -117,13 +102,6 @@ class ImageDataset(Dataset):
         """
 
         # Get the size of the datasets (The number of samples in the dataset.)
-        # Hint: The folder we provide contains samples and their mask, which means we have two images for each samples.
-        
-        # size_of_dataset = int(
-        #     len(
-        #         [name for name in os.listdir(self.root_dir) if os.path.isfile(os.path.join(self.root_dir, name))]
-        #     ) / 2   # imput and output
-        # )
         size_of_dataset = int(len(self.edof_files))
            
         return size_of_dataset
