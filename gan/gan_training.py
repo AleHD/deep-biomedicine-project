@@ -25,6 +25,8 @@ class GANTrainer(Trainer):
         # initialize optimizers for generator and discriminator
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.d_optim = optim.Adam(self.discriminator.parameters(), lr=self.learning_rate)
+        # early stopping parameter
+        self.patience = 20
     
     def compute_loss(self, data, do_step=True):
         

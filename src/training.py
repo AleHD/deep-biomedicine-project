@@ -25,7 +25,9 @@ class Trainer():
         self.device = device
         self.learning_rate = learning_rate
         self.model_file = model_file
-
+        #Early stopping parameters
+        self.patience = 10
+        
     def train(self, epochs, trainloader, validation_loader,
               scheduler="plateau", warmup=0.0):
 
@@ -43,7 +45,6 @@ class Trainer():
         """
 
         #Early stopping parameters
-        patience = 10
         best_val_loss = float('inf')
         best_model_state_dict = None
         counter_since_improvement = 0
@@ -95,8 +96,8 @@ class Trainer():
 
 
                 # Early stopping check
-                if counter_since_improvement >= patience:
-                    print(f'Early stopping after {patience} epochs without improvement.')
+                if counter_since_improvement >= self.patience:
+                    print(f'Early stopping after {self.patience} epochs without improvement.')
                     break
                 
                 # Training Logs printed.
