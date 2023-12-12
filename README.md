@@ -15,3 +15,6 @@ Finally, `main.ipynb` shows the final results and compares the performance of ea
 
 The results directory contains examples of the results.
 
+![alt text](https://github.com/AleHD/deep-biomedicine-project/blob/main/Summary.png)
+
+![alt text](https://github.com/AleHD/deep-biomedicine-project/blob/main/GAN_summary.png)
