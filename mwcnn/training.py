@@ -30,6 +30,8 @@ class MWCNNTrainer(Trainer):
             self.scale = scale
         else:
             self.global_criterion = None
+            
+        self.patience = 10
                         
     def compute_loss(self, data, do_step=True):
         

@@ -26,7 +26,7 @@ class GANTrainer(Trainer):
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.d_optim = optim.Adam(self.discriminator.parameters(), lr=self.learning_rate)
         # early stopping parameter
-        self.patience = 20
+        self.patience = 25
     
     def compute_loss(self, data, do_step=True):
         
@@ -68,7 +68,7 @@ class GANTrainer(Trainer):
         L1_loss = self.l1_loss(output, data["output_image"].float())
         adversarial_loss = self.adverserial_loss(fake_prob, real_label)
         # L1 loss ~1 order of magnitude smaller
-        g_loss = percep_loss + adversarial_loss + 10 * L1_loss
+        g_loss = 0.5 * percep_loss + 0.5 * adversarial_loss + 10 * L1_loss
         if do_step:
             # step down gradient
             self.optimizer.zero_grad()
