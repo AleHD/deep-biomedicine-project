@@ -19,7 +19,8 @@ class Unet_trainer(Trainer):
 
         # Loss function we use in this exercise.
         self.criterion = torch.nn.L1Loss()
-
+        # for early stopping
+        self.patience = 10
 
     def compute_loss(self, data, do_step=True):
         if do_step:
