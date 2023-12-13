@@ -45,18 +45,17 @@ def main():
     print(f"Number of parameters: {n_params:.3f}M")
 
     # Start training.
-    epochs = 3
+    epochs = 100
     model = model.train()
     trainer = DiffusionTrainer(model, learning_rate=1e-3, weight_decay=0.0)
-    train_loss, val_loss = trainer.train(epochs, loader, loader_val,
-                                         scheduler="cosine", warmup=0.2)
+    train_loss, val_loss = trainer.train(epochs, loader, loader_val)
     model = model.eval()
 
     # Save model.
     torch.save(model.state_dict(), "diffusion/model.pt")
 
     # Show learning history.
-    plot_loss(epochs, train_loss, val_loss)
+    plot_loss(len(train_loss), train_loss, val_loss)
     plt.savefig("diffusion/learning.png")
 
 

@@ -12,6 +12,7 @@ class DiffusionTrainer(Trainer):
                                           lr=learning_rate,
                                           weight_decay=weight_decay)
         self.device = self.model.device
+        self.patience = 15
 
     def compute_loss(self, batch, do_step=True):
         if do_step:
