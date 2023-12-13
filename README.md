@@ -13,7 +13,8 @@ The `src` has code which is used for each model, such as a Imagedataset class us
 
 Finally, `main.ipynb` shows the final results and compares the performance of each of the models.
 
-The results directory contains examples of the results.
+The results directory contains examples of the results. The PSNR score for the results images are in the file names.
+Below is a sample of the results obtained with our models.
 
 ![alt text](https://github.com/AleHD/deep-biomedicine-project/blob/main/Summary.png)
 
